@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,600;0,700;1,600;1,700&family=Libre+Franklin:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;background:#EAEFF3;}
+  *{box-sizing:border-box;}
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:#CBD8E0;border-radius:9px;}
+</style>
+</helmet>
+
+<section style="font-family:'Libre Franklin',sans-serif;padding:40px 32px 80px;">
+  <div style="max-width:1280px;margin:0 auto 30px;">
+    <div style="font-family:'Bitter',serif;font-weight:700;font-style:italic;font-size:30px;letter-spacing:-.01em;"><span style="color:#0096C7;">IT</span> <span style="color:#0F172A;">Bank</span> <span style="font-style:normal;font-weight:600;font-size:17px;color:#5B6B7A;">— Banking Simulator UI</span></div>
+    <div style="color:#5B6B7A;font-size:14px;margin-top:8px;max-width:760px;line-height:1.5;">Two directions to compare. Use the <strong>role switcher</strong> (Customer / Manager / Admin) and the side navigation in each mock to browse all screens — login, dashboards, accounts &amp; cards, transfers, the insufficient-funds top-up flow, requests, approvals and user management.</div>
+    <div style="display:flex;gap:10px;margin-top:14px;font-size:13px;">
+      <a href="#1a" style="text-decoration:none;color:#0077B6;font-weight:600;background:#fff;border:1px solid #CFE4ED;padding:6px 13px;border-radius:999px;">1a · Ocean Header</a>
+      <a href="#1b" style="text-decoration:none;color:#0077B6;font-weight:600;background:#fff;border:1px solid #CFE4ED;padding:6px 13px;border-radius:999px;">1b · Cyan Rail</a>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:48px;justify-content:center;align-items:flex-start;">
+
+    <!-- ============================= OPTION 1A · OCEAN HEADER ============================= -->
+    <div id="1a" style="width:1200px;max-width:100%;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span style="background:#0077B6;color:#fff;font-weight:700;font-size:13px;padding:4px 11px;border-radius:8px;">1a</span>
+        <span style="font-family:'Bitter',serif;font-weight:700;font-size:17px;color:#0F172A;">Ocean Header</span>
+        <span style="color:#8595A3;font-size:13px;">— deep-blue top bar, light sidebar</span>
+      </div>
+      <div style="height:812px;background:#fff;border:1px solid #DCE7ED;border-radius:18px;overflow:hidden;box-shadow:0 20px 50px -28px rgba(2,32,71,.4);">
+        <sc-if value="{{ aShowApp }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;height:100%;">
+          <aside style="width:252px;flex-shrink:0;background:#fff;border-right:1px solid #EDF3F6;display:flex;flex-direction:column;padding:22px 16px;">
+            <div style="font-family:'Bitter',serif;font-weight:700;font-style:italic;font-size:23px;padding:4px 8px 18px;"><span style="color:#0096C7;">IT</span> <span style="color:#0F172A;">Bank</span></div>
+            <div style="display:flex;background:#F1F7FA;border-radius:11px;padding:3px;margin-bottom:20px;">
+              <sc-for list="{{ aRoleTabs }}" as="tab" hint-placeholder-count="3">
+                <sc-if value="{{ tab.active }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ tab.onClick }}" data-testid="{{ tab.testid }}" style="flex:1;padding:8px 4px;border:none;border-radius:9px;background:#fff;color:#0077B6;font:700 12.5px 'Libre Franklin';cursor:pointer;box-shadow:0 1px 2px rgba(2,32,71,.12);">{{ tab.label }}</button>
+                </sc-if>
+                <sc-if value="{{ tab.inactive }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ tab.onClick }}" data-testid="{{ tab.testid }}" style="flex:1;padding:8px 4px;border:none;border-radius:9px;background:transparent;color:#5B6B7A;font:600 12.5px 'Libre Franklin';cursor:pointer;">{{ tab.label }}</button>
+                </sc-if>
+              </sc-for>
+            </div>
+            <nav style="display:flex;flex-direction:column;gap:4px;">
+              <sc-for list="{{ aNav }}" as="item" hint-placeholder-count="4">
+                <sc-if value="{{ item.active }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ item.onClick }}" data-testid="{{ item.testid }}" style="text-align:left;padding:11px 14px;border:none;border-radius:10px;background:#E6F4F9;color:#0077B6;font:700 14px 'Libre Franklin';cursor:pointer;">{{ item.label }}</button>
+                </sc-if>
+                <sc-if value="{{ item.inactive }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ item.onClick }}" data-testid="{{ item.testid }}" style="text-align:left;padding:11px 14px;border:none;border-radius:10px;background:transparent;color:#4A5A67;font:600 14px 'Libre Franklin';cursor:pointer;" style-hover="background:#F4FAFC;">{{ item.label }}</button>
+                </sc-if>
+              </sc-for>
+            </nav>
+            <div style="margin-top:auto;padding-top:18px;border-top:1px solid #EDF3F6;">
+              <button data-testid="change-password-a" style="width:100%;text-align:left;padding:10px 14px;border:none;border-radius:10px;background:transparent;color:#5B6B7A;font:600 13px 'Libre Franklin';cursor:pointer;" style-hover="background:#F4FAFC;">Change password</button>
+            </div>
+          </aside>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+            <header style="height:62px;flex-shrink:0;background:#0077B6;display:flex;align-items:center;justify-content:space-between;padding:0 26px;">
+              <div data-testid="page-title-a" style="font-family:'Bitter',serif;font-weight:600;font-size:18px;color:#fff;">{{ aTitle }}</div>
+              <div style="display:flex;align-items:center;gap:14px;">
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border-radius:999px;padding:7px 14px;color:#DCF1F8;font-size:13px;">Search…</div>
+                <div style="display:flex;align-items:center;gap:9px;">
+                  <div style="width:34px;height:34px;border-radius:50%;background:#90E0EF;color:#024E73;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;">{{ aUser.initials }}</div>
+                  <div style="line-height:1.15;">
+                    <div style="color:#fff;font-size:13px;font-weight:600;">{{ aUser.name }}</div>
+                    <div style="color:#BFE6F2;font-size:11px;">{{ aUser.label }}</div>
+                  </div>
+                </div>
+                <button onClick="{{ onSignOutA }}" data-testid="sign-out-a" style="padding:7px 14px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:9px;font:600 12.5px 'Libre Franklin';cursor:pointer;">Sign out</button>
+              </div>
+            </header>
+            <div style="flex:1;overflow-y:auto;background:#fff;">
+              <dc-import name="BankScreen" dc-props="{{ aChild }}" hint-size="100%,720px"></dc-import>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ aShowLogin }}" hint-placeholder-val="{{ false }}">
+          <div style="height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#F4FAFC,#E3F3F9);">
+            <div data-testid="login-card-a" style="width:380px;background:#fff;border:1px solid #E3EEF3;border-radius:18px;padding:34px 32px;box-shadow:0 24px 60px -30px rgba(2,32,71,.45);">
+              <div style="font-family:'Bitter',serif;font-weight:700;font-style:italic;font-size:28px;text-align:center;margin-bottom:6px;"><span style="color:#0096C7;">IT</span> <span style="color:#0F172A;">Bank</span></div>
+              <div style="text-align:center;color:#5B6B7A;font-size:13.5px;margin-bottom:24px;">Sign in to your account</div>
+              <label style="display:block;font-size:12.5px;font-weight:600;color:#5B6B7A;margin-bottom:6px;">Username</label>
+              <input data-testid="login-username-a" value="anna.becker" style="width:100%;padding:11px 12px;border:1px solid #CFE4ED;border-radius:9px;font:500 14px 'Libre Franklin';margin-bottom:16px;">
+              <label style="display:block;font-size:12.5px;font-weight:600;color:#5B6B7A;margin-bottom:6px;">Password</label>
+              <input data-testid="login-password-a" type="password" value="password" style="width:100%;padding:11px 12px;border:1px solid #CFE4ED;border-radius:9px;font:500 14px 'Libre Franklin';margin-bottom:22px;">
+              <button onClick="{{ onSignInA }}" data-testid="login-submit-a" style="width:100%;padding:13px;background:#0096C7;color:#fff;border:none;border-radius:10px;font:700 15px 'Libre Franklin';cursor:pointer;" style-hover="background:#0077B6;">Sign in</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============================= OPTION 1B · CYAN RAIL ============================= -->
+    <div id="1b" style="width:1200px;max-width:100%;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span style="background:#0096C7;color:#fff;font-weight:700;font-size:13px;padding:4px 11px;border-radius:8px;">1b</span>
+        <span style="font-family:'Bitter',serif;font-weight:700;font-size:17px;color:#0F172A;">Cyan Rail</span>
+        <span style="color:#8595A3;font-size:13px;">— deep-blue sidebar, white top bar</span>
+      </div>
+      <div style="height:812px;background:#fff;border:1px solid #DCE7ED;border-radius:18px;overflow:hidden;box-shadow:0 20px 50px -28px rgba(2,32,71,.4);">
+        <sc-if value="{{ bShowApp }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;height:100%;">
+          <aside style="width:252px;flex-shrink:0;background:linear-gradient(185deg,#0077B6,#005E92);display:flex;flex-direction:column;padding:22px 16px;">
+            <div style="display:flex;background:rgba(255,255,255,.14);border-radius:11px;padding:3px;margin-bottom:20px;">
+              <sc-for list="{{ bRoleTabs }}" as="tab" hint-placeholder-count="3">
+                <sc-if value="{{ tab.active }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ tab.onClick }}" data-testid="{{ tab.testid }}" style="flex:1;padding:8px 4px;border:none;border-radius:9px;background:#fff;color:#0077B6;font:700 12.5px 'Libre Franklin';cursor:pointer;">{{ tab.label }}</button>
+                </sc-if>
+                <sc-if value="{{ tab.inactive }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ tab.onClick }}" data-testid="{{ tab.testid }}" style="flex:1;padding:8px 4px;border:none;border-radius:9px;background:transparent;color:rgba(255,255,255,.85);font:600 12.5px 'Libre Franklin';cursor:pointer;">{{ tab.label }}</button>
+                </sc-if>
+              </sc-for>
+            </div>
+            <nav style="display:flex;flex-direction:column;gap:4px;">
+              <sc-for list="{{ bNav }}" as="item" hint-placeholder-count="4">
+                <sc-if value="{{ item.active }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ item.onClick }}" data-testid="{{ item.testid }}" style="text-align:left;padding:11px 14px;border:none;border-radius:10px;background:rgba(255,255,255,.18);color:#fff;font:700 14px 'Libre Franklin';cursor:pointer;">{{ item.label }}</button>
+                </sc-if>
+                <sc-if value="{{ item.inactive }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ item.onClick }}" data-testid="{{ item.testid }}" style="text-align:left;padding:11px 14px;border:none;border-radius:10px;background:transparent;color:rgba(255,255,255,.78);font:600 14px 'Libre Franklin';cursor:pointer;" style-hover="background:rgba(255,255,255,.08);">{{ item.label }}</button>
+                </sc-if>
+              </sc-for>
+            </nav>
+            <div style="margin-top:auto;padding-top:18px;border-top:1px solid rgba(255,255,255,.16);">
+              <button data-testid="change-password-b" style="width:100%;text-align:left;padding:10px 14px;border:none;border-radius:10px;background:transparent;color:rgba(255,255,255,.85);font:600 13px 'Libre Franklin';cursor:pointer;" style-hover="background:rgba(255,255,255,.08);">Change password</button>
+            </div>
+          </aside>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+            <header style="height:62px;flex-shrink:0;background:#fff;border-bottom:1px solid #EDF3F6;display:flex;align-items:center;justify-content:space-between;padding:0 26px;">
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div style="font-family:'Bitter',serif;font-weight:700;font-style:italic;font-size:21px;"><span style="color:#0096C7;">IT</span> <span style="color:#0F172A;">Bank</span></div>
+                <div style="width:1px;height:24px;background:#E3EEF3;"></div>
+                <div data-testid="page-title-b" style="font-family:'Bitter',serif;font-weight:600;font-size:17px;color:#0F172A;border-bottom:2px solid #00B4D8;padding-bottom:2px;">{{ bTitle }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;">
+                <div style="display:flex;align-items:center;gap:8px;background:#F1F7FA;border-radius:999px;padding:7px 14px;color:#5B6B7A;font-size:13px;">Search…</div>
+                <div style="display:flex;align-items:center;gap:9px;">
+                  <div style="width:34px;height:34px;border-radius:50%;background:#0096C7;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;">{{ bUser.initials }}</div>
+                  <div style="line-height:1.15;">
+                    <div style="color:#0F172A;font-size:13px;font-weight:600;">{{ bUser.name }}</div>
+                    <div style="color:#8595A3;font-size:11px;">{{ bUser.label }}</div>
+                  </div>
+                </div>
+                <button onClick="{{ onSignOutB }}" data-testid="sign-out-b" style="padding:7px 14px;background:#fff;color:#0077B6;border:1px solid #BFE6F2;border-radius:9px;font:600 12.5px 'Libre Franklin';cursor:pointer;">Sign out</button>
+              </div>
+            </header>
+            <div style="flex:1;overflow-y:auto;background:#fff;">
+              <dc-import name="BankScreen" dc-props="{{ bChild }}" hint-size="100%,720px"></dc-import>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ bShowLogin }}" hint-placeholder-val="{{ false }}">
+          <div style="height:100%;display:flex;">
+            <div style="width:46%;background:linear-gradient(185deg,#0077B6,#0096C7);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:50px;">
+              <div style="font-family:'Bitter',serif;font-weight:700;font-style:italic;font-size:34px;">IT Bank</div>
+              <div style="font-size:15px;opacity:.9;margin-top:12px;line-height:1.5;max-width:300px;">Secure retail banking for customers, account managers and administrators.</div>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;background:#fff;">
+              <div data-testid="login-card-b" style="width:340px;">
+                <div style="font-family:'Bitter',serif;font-weight:700;font-size:22px;margin-bottom:6px;">Welcome back</div>
+                <div style="color:#5B6B7A;font-size:13.5px;margin-bottom:24px;">Please sign in to continue.</div>
+                <label style="display:block;font-size:12.5px;font-weight:600;color:#5B6B7A;margin-bottom:6px;">Username</label>
+                <input data-testid="login-username-b" value="anna.becker" style="width:100%;padding:11px 12px;border:1px solid #CFE4ED;border-radius:9px;font:500 14px 'Libre Franklin';margin-bottom:16px;">
+                <label style="display:block;font-size:12.5px;font-weight:600;color:#5B6B7A;margin-bottom:6px;">Password</label>
+                <input data-testid="login-password-b" type="password" value="password" style="width:100%;padding:11px 12px;border:1px solid #CFE4ED;border-radius:9px;font:500 14px 'Libre Franklin';margin-bottom:22px;">
+                <button onClick="{{ onSignInB }}" data-testid="login-submit-b" style="width:100%;padding:13px;background:#0096C7;color:#fff;border:none;border-radius:10px;font:700 15px 'Libre Franklin';cursor:pointer;" style-hover="background:#0077B6;">Sign in</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    a: { role: 'customer', screen: 'dashboard', topup: false },
+    b: { role: 'customer', screen: 'dashboard', topup: false }
+  };
+
+  setScreen(opt, key) {
+    this.setState(s => ({ [opt]: Object.assign({}, s[opt], { screen: key }) }));
+  }
+  setRole(opt, role) {
+    this.setState(s => ({ [opt]: { role: role, screen: 'dashboard', topup: false } }));
+  }
+  toggleTopup(opt) {
+    this.setState(s => ({ [opt]: Object.assign({}, s[opt], { topup: !s[opt].topup }) }));
+  }
+
+  screensFor(role) {
+    if (role === 'manager') return [['dashboard','Dashboard'],['clients','My Clients'],['approvals','Approvals']];
+    if (role === 'admin') return [['dashboard','Overview'],['approvals','Approvals'],['users','User Management']];
+    return [['dashboard','Dashboard'],['accounts','Accounts & Cards'],['transfer','Transfer & Pay'],['requests','My Requests']];
+  }
+
+  navFor(opt) {
+    const o = this.state[opt];
+    const self = this;
+    return this.screensFor(o.role).map(function (s) {
+      const key = s[0];
+      const active = o.screen === key;
+      return {
+        label: s[1],
+        testid: 'nav-' + key + '-' + opt,
+        onClick: function () { self.setScreen(opt, key); },
+        active: active,
+        inactive: !active
+      };
+    });
+  }
+
+  roleTabsFor(opt) {
+    const o = this.state[opt];
+    const self = this;
+    return [['customer','Customer'],['manager','Manager'],['admin','Admin']].map(function (r) {
+      const active = o.role === r[0];
+      return {
+        label: r[1],
+        testid: 'role-tab-' + r[0] + '-' + opt,
+        onClick: function () { self.setRole(opt, r[0]); },
+        active: active,
+        inactive: !active
+      };
+    });
+  }
+
+  titleFor(opt) {
+    const o = this.state[opt];
+    if (o.screen === 'login') return 'Sign in';
+    if (o.screen === 'dashboard') {
+      if (o.role === 'admin') return 'System Overview';
+      if (o.role === 'manager') return 'Manager Dashboard';
+      return 'Dashboard';
+    }
+    const map = { accounts:'Accounts & Cards', transfer:'Transfer & Pay', requests:'My Requests', clients:'My Clients', approvals:'Approvals Queue', users:'User Management' };
+    return map[o.screen] || '';
+  }
+
+  userFor(opt) {
+    const role = this.state[opt].role;
+    if (role === 'manager') return { name: 'Sofia Lang', initials: 'SL', label: 'Account Manager' };
+    if (role === 'admin') return { name: 'System Admin', initials: 'AD', label: 'Administrator' };
+    return { name: 'Anna Becker', initials: 'AB', label: 'Customer' };
+  }
+
+  flags(opt) {
+    const o = this.state[opt];
+    const r = o.role, sc = o.screen;
+    return {
+      showCustomerDashboard: r === 'customer' && sc === 'dashboard',
+      showManagerDashboard: r === 'manager' && sc === 'dashboard',
+      showAdminDashboard: r === 'admin' && sc === 'dashboard',
+      showAccounts: r === 'customer' && sc === 'accounts',
+      showTransfer: r === 'customer' && sc === 'transfer',
+      showRequests: r === 'customer' && sc === 'requests',
+      showClients: r === 'manager' && sc === 'clients',
+      showApprovals: (r === 'manager' || r === 'admin') && sc === 'approvals',
+      showUsers: r === 'admin' && sc === 'users'
+    };
+  }
+
+  data() {
+    return {
+      accounts: [
+        { id:'cur', name:'Current Account', iban:'DE89 3704 0044 0532 0130 00', balance:'€4,820.50', status:'Active', statusBg:'#E7F3EC', statusColor:'#2E7D5B', freezeLabel:'Freeze' },
+        { id:'sav', name:'Savings Account', iban:'DE12 5001 0517 0648 4898 90', balance:'€12,300.00', status:'Active', statusBg:'#E7F3EC', statusColor:'#2E7D5B', freezeLabel:'Freeze' },
+        { id:'joint', name:'Joint Account', iban:'DE44 5001 0517 5407 3249 31', balance:'€0.00', status:'Frozen', statusBg:'#FBF1E0', statusColor:'#9A6B12', freezeLabel:'Unfreeze' }
+      ],
+      debitCards: [
+        { id:'d1', brand:'Visa Debit', number:'•••• •••• •••• 4821', sub:'Linked to Current Account', status:'Active' },
+        { id:'d2', brand:'Visa Debit', number:'•••• •••• •••• 7702', sub:'Linked to Savings Account', status:'Frozen' }
+      ],
+      creditCard: { brand:'Mastercard Credit', number:'•••• •••• •••• 9930', limit:'€2,000', balance:'€-340.00', balColor:'#FFB4A8', status:'Active' },
+      transactions: [
+        { id:'t1', type:'Card payment', meta:'Grocery · Visa Debit ••4821', amount:'−€58.20', amtColor:'#0F172A', date:'30 Jun' },
+        { id:'t2', type:'Transfer to Savings', meta:'From Current Account', amount:'−€500.00', amtColor:'#0F172A', date:'29 Jun' },
+        { id:'t3', type:'Deposit', meta:'Salary', amount:'+€1,200.00', amtColor:'#2E7D5B', date:'28 Jun' },
+        { id:'t4', type:'Credit card top-up', meta:'From Current Account', amount:'+€300.00', amtColor:'#2E7D5B', date:'27 Jun' },
+        { id:'t5', type:'Card payment', meta:'Online · Mastercard ••9930', amount:'−€89.99', amtColor:'#0F172A', date:'26 Jun' }
+      ],
+      requests: [
+        { id:'r1', type:'Increase credit limit to €3,000', date:'30 Jun 2026', status:'Pending', statusBg:'#FBF1E0', statusColor:'#9A6B12', cancellable:true, hasReason:false, reason:'' },
+        { id:'r2', type:'Withdraw €400.00', date:'30 Jun 2026', status:'Pending', statusBg:'#FBF1E0', statusColor:'#9A6B12', cancellable:true, hasReason:false, reason:'' },
+        { id:'r3', type:'Issue debit card', date:'28 Jun 2026', status:'Approved', statusBg:'#E7F3EC', statusColor:'#2E7D5B', cancellable:false, hasReason:false, reason:'' },
+        { id:'r4', type:'Close Joint Account', date:'25 Jun 2026', status:'Rejected', statusBg:'#F6E9E8', statusColor:'#B0463C', cancellable:false, hasReason:true, reason:'Account balance must be €0.00 before closure.' }
+      ],
+      clients: [
+        { id:'c1', name:'Anna Becker', initials:'AB', accounts:'2 accounts', balance:'€17,120.50', status:'Active', statusBg:'#E7F3EC', statusColor:'#2E7D5B' },
+        { id:'c2', name:'Lukas Vogel', initials:'LV', accounts:'1 account', balance:'€230.00', status:'Frozen card', statusBg:'#FBF1E0', statusColor:'#9A6B12' },
+        { id:'c3', name:'Mara Klein', initials:'MK', accounts:'3 accounts', balance:'€54,900.00', status:'Active', statusBg:'#E7F3EC', statusColor:'#2E7D5B' },
+        { id:'c4', name:'Tomas Roth', initials:'TR', accounts:'1 account', balance:'€0.00', status:'Pending close', statusBg:'#EFF1F3', statusColor:'#64748B' }
+      ],
+      approvals: [
+        { id:'a1', customer:'Anna Becker', manager:'Sofia Lang', request:'Increase credit limit → €3,000', date:'30 Jun' },
+        { id:'a2', customer:'Lukas Vogel', manager:'Sofia Lang', request:'Withdraw €400.00', date:'30 Jun' },
+        { id:'a3', customer:'Mara Klein', manager:'David Mertens', request:'Issue credit card', date:'29 Jun' },
+        { id:'a4', customer:'Tomas Roth', manager:'Elif Yilmaz', request:'Close bank account', date:'29 Jun' }
+      ],
+      managers: [
+        { id:'m1', name:'Sofia Lang', clients:14, removeBlocked:true, removeColor:'#B6C2CC', removeBorder:'#E6ECF0', removeCursor:'not-allowed' },
+        { id:'m2', name:'David Mertens', clients:9, removeBlocked:true, removeColor:'#B6C2CC', removeBorder:'#E6ECF0', removeCursor:'not-allowed' },
+        { id:'m3', name:'Elif Yilmaz', clients:0, removeBlocked:false, removeColor:'#B0463C', removeBorder:'#E7C9C6', removeCursor:'pointer' }
+      ],
+      adminCustomers: [
+        { id:'u1', name:'Anna Becker', manager:'Sofia Lang' },
+        { id:'u2', name:'Lukas Vogel', manager:'Sofia Lang' },
+        { id:'u3', name:'Mara Klein', manager:'David Mertens' },
+        { id:'u4', name:'Tomas Roth', manager:'Elif Yilmaz' }
+      ],
+      fundingSources: [
+        { id:'f1', name:'Current Account', balance:'€4,820.50', status:'Active', statusBg:'#E7F3EC', statusColor:'#2E7D5B' },
+        { id:'f2', name:'Savings Account', balance:'€12,300.00', status:'Active', statusBg:'#E7F3EC', statusColor:'#2E7D5B' },
+        { id:'f3', name:'Visa Debit ••7702', balance:'€12,300.00', status:'Frozen', statusBg:'#FBF1E0', statusColor:'#9A6B12' },
+        { id:'f4', name:'Mastercard ••9930', balance:'€-340.00', status:'Active', statusBg:'#E7F3EC', statusColor:'#2E7D5B' }
+      ],
+      topupSources: [
+        { id:'s1', name:'Savings Account', balance:'€12,300.00', flag:'Available', flagBg:'#E7F3EC', flagColor:'#2E7D5B', disabled:false, borderColor:'#CFE4ED', rowBg:'#fff', cursor:'pointer', nameColor:'#0F172A' },
+        { id:'s2', name:'Mastercard ••9930', balance:'€-340.00', flag:'Available', flagBg:'#E7F3EC', flagColor:'#2E7D5B', disabled:false, borderColor:'#CFE4ED', rowBg:'#fff', cursor:'pointer', nameColor:'#0F172A' },
+        { id:'s3', name:'Visa Debit ••7702', balance:'€12,300.00', flag:'Frozen — unfreeze to use', flagBg:'#FBF1E0', flagColor:'#9A6B12', disabled:true, borderColor:'#EFE3C6', rowBg:'#FCFAF4', cursor:'not-allowed', nameColor:'#8595A3' }
+      ]
+    };
+  }
+
+  childProps(opt) {
+    const o = this.state[opt];
+    const self = this;
+    return Object.assign({}, this.data(), this.flags(opt), {
+      topup: o.topup,
+      onToggleTopup: function () { self.toggleTopup(opt); },
+      topupToggleLabel: o.topup ? 'Hide insufficient-funds demo' : 'Simulate insufficient funds',
+      approvalsSubtitle: o.role === 'admin' ? 'All pending requests across every Account Manager.' : 'Requests from clients in your portfolio.'
+    });
+  }
+
+  renderVals() {
+    const self = this;
+    return {
+      // option A
+      aNav: this.navFor('a'),
+      aRoleTabs: this.roleTabsFor('a'),
+      aTitle: this.titleFor('a'),
+      aUser: this.userFor('a'),
+      aChild: this.childProps('a'),
+      aShowApp: this.state.a.screen !== 'login',
+      aShowLogin: this.state.a.screen === 'login',
+      onSignOutA: function () { self.setScreen('a', 'login'); },
+      onSignInA: function () { self.setScreen('a', 'dashboard'); },
+      // option B
+      bNav: this.navFor('b'),
+      bRoleTabs: this.roleTabsFor('b'),
+      bTitle: this.titleFor('b'),
+      bUser: this.userFor('b'),
+      bChild: this.childProps('b'),
+      bShowApp: this.state.b.screen !== 'login',
+      bShowLogin: this.state.b.screen === 'login',
+      onSignOutB: function () { self.setScreen('b', 'login'); },
+      onSignInB: function () { self.setScreen('b', 'dashboard'); }
+    };
+  }
+}
+</script>
+</body>
+</html>
