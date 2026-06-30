@@ -12,7 +12,7 @@
 | Navigation | 5 separate SPEC routes for customer (no combined pages) |
 | Role switcher | Removed — users have one fixed role per login |
 | Account types | Savings or Current; chosen by Customer when requesting, by Manager/Admin when creating directly |
-| IBAN format | Auto-generated `IB` + 2 random digits + 16 alphanumeric chars, grouped: `IB12 XXXX XXXX XXXX XXXX XX` |
+| IBAN format | Auto-generated `IB` + 2 random digits + 16 alphanumeric chars, grouped: `IB12 XXXX XXXX XXXX XXXX` |
 | Search bar | Functional, role-scoped; results in modal table with export (.pdf .csv .xls .xlsx .ods) |
 | Change password | Modal dialog over current page; inline success/error messages |
 | Transaction history | Dedicated nav-level page per role (customer: own data; manager: portfolio + client detail view; admin: system-wide) |
@@ -23,8 +23,8 @@
 | Admin transaction history | System-wide page (`/admin/history`) |
 | Export scope | Both search results modal AND transaction history pages |
 | Transaction history milestone | Separate milestone (M5) |
-| Login credentials display | Static informational text on login screen for 3 demo users; password for all seeded users: `pass` |
-| Demo user credentials | Admin: `michael.scott` / Manager: `sofia.lang` / Customer: `anna.becker` — all `pass` |
+| Login credentials display | Static informational text on login screen for 3 demo users; password for all seeded users: `Password123!` |
+| Demo user credentials | Admin: `michael.scott` / Manager: `sofia.lang` / Customer: `anna.becker` — all `Password123!` |
 | Unit tests | Backend only (Vitest + Supertest); Playwright E2E out of scope |
 | DB reset button | Admin panel only; confirmation modal before reset; success/abort modals after |
 | Dashboard routes | Added for Customer (`/customer/dashboard`) and Manager (`/manager/dashboard`) — not in original SPEC |
@@ -75,7 +75,7 @@ banking-simulator/
 | Provisioning | Docker Compose (named volume) |
 | Migrations | Prisma schema + migrations |
 | Seed | Prisma seed script |
-| Demo password | All seeded users: `pass` |
+| Demo password | All seeded users: `Password123!` |
 
 ### Testing
 | Concern | Choice |
@@ -177,15 +177,19 @@ banking-simulator/
 | `debit_cards` | id, bank_account_id, customer_id, status, created_at |
 | `credit_cards` | id, customer_id, status, credit_limit (DECIMAL 15,2), outstanding_balance (DECIMAL 15,2), created_at |
 | `transactions` | id, type, from_account_id?, to_account_id?, from_card_id?, to_card_id?, debit_card_id?, amount, description?, created_at |
-| `requests` | id, customer_id, account_manager_id?, type, status (pending\|approved\|rejected\|cancelled), payload (JSON), rejection_reason?, created_at, actioned_at? |
+| `requests` | id, customer_id, account_manager_id (auto-filled from customer's assigned manager at creation), type, status (pending\|approved\|rejected\|cancelled), payload (JSON), rejection_reason?, created_at, actioned_at? |
 
-**IBAN format:** `IB` + 2 random digits + 16 random alphanumeric chars → displayed as `IB12 XXXX XXXX XXXX XXXX XX`
+**Transaction card column semantics:**
+- `debit_card_id` — set when the instrument is a debit card spending from its linked account (spend flow)
+- `from_card_id` / `to_card_id` — set for card-to-card top-up flows
+
+**IBAN format:** `IB` + 2 random digits + 16 random alphanumeric chars → displayed as `IB12 XXXX XXXX XXXX XXXX`
 
 **Seed data (`prisma/seed.ts`):**
-- 1 admin: `michael.scott` / `pass`
-- 2 managers: `sofia.lang` / `pass`, `david.mertens` / `pass`
-- 4 customers (2 per manager): `anna.becker`, `lukas.vogel`, `mara.klein`, `tomas.roth` — all `pass`
-- Each customer: 1 savings account + 1 current account, 1 debit card per account, 1 credit card (limit €2,000), sample transactions
+- 1 admin: `michael.scott` / `Password123!`
+- 2 managers: `sofia.lang` / `Password123!`, `david.mertens` / `Password123!`
+- 4 customers (2 per manager): `anna.becker`, `lukas.vogel`, `mara.klein`, `tomas.roth` — all `Password123!`
+- Each customer: 1 savings account + 1 current account, 1 debit card per account, 1 credit card (limit €2,000), 3–10 sample transactions (random count per customer, random amounts €10.00–€300.00, mixed types)
 
 ### 1.4 Backend Skeleton
 - Express app: CORS, JSON body parser, global error handler (`{ error, code }`)
@@ -201,7 +205,8 @@ POST  /api/v1/auth/logout                            →  { message }
 PUT   /api/v1/auth/password  { currentPassword, newPassword }  →  { message }
 ```
 - Passwords: bcrypt cost ≥ 12
-- JWT: `{ sub: userId, role, iat, exp }`, expires 8h
+- JWT payload: `{ sub: userId, role, jti, iat, exp }`, expires 8h
+- Logout: token added to an **in-memory blacklist** keyed by `jti`; TTL = token's remaining expiry. `authenticate` middleware rejects blacklisted tokens with 401. (No Redis — in-memory is sufficient; blacklist clears on server restart.)
 
 ### 1.6 Frontend Skeleton
 - Vite + React 18 + TypeScript + TailwindCSS
@@ -221,7 +226,7 @@ PUT   /api/v1/auth/password  { currentPassword, newPassword }  →  { message }
   - Manager: Dashboard · My Clients · Approvals · Transaction History
   - Admin: Overview · Approvals · User Management · Transaction History
 - Protected routes: unauthenticated → `/login`; wrong role → redirect to role's home
-- **Change password modal:** current password + new password inputs; inline success/error; `data-testid`: `modal-change-password`, `input-current-password`, `input-new-password`, `btn-change-password`, `msg-success`, `msg-error`
+- **Change password modal:** current password + new password inputs; inline success/error; modal stays open until user manually dismisses it; `data-testid`: `modal-change-password`, `input-current-password`, `input-new-password`, `btn-change-password`, `msg-success`, `msg-error`
 
 ### 1.8 Login Screen (`/login`)
 - Centered 380px card on `linear-gradient(160deg,#F4FAFC,#E3F3F9)`
@@ -229,7 +234,7 @@ PUT   /api/v1/auth/password  { currentPassword, newPassword }  →  { message }
 - Error message on failure
 - Static demo credentials panel below the form:
   ```
-  Demo accounts  ·  password: pass
+  Demo accounts  ·  password: Password123!
   ─────────────────────────────────
   Admin     michael.scott
   Manager   sofia.lang
@@ -238,12 +243,14 @@ PUT   /api/v1/auth/password  { currentPassword, newPassword }  →  { message }
 - After login: redirect to role's dashboard
 
 ### 1.9 Routes added in M1
-| Path | Role |
-|---|---|
-| `/login` | public |
-| `/customer/dashboard` | customer |
-| `/manager/dashboard` | account_manager |
-| `/admin/overview` | admin |
+Dashboard/overview routes are **stub pages** in M1 — correct layout + nav + header, "Coming soon" body. Full content is implemented in M2 (customer), M3 (manager), M4 (admin).
+
+| Path | Role | M1 content |
+|---|---|---|
+| `/login` | public | Full implementation |
+| `/customer/dashboard` | customer | Stub |
+| `/manager/dashboard` | account_manager | Stub |
+| `/admin/overview` | admin | Stub |
 
 ### 1.10 Backend Unit Tests (M1)
 - Login: success, wrong password (401), missing fields (400)
