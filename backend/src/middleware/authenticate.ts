@@ -14,7 +14,7 @@ interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: { id: string; role: Role; jti: string };
+      user?: { id: string; role: Role; jti: string; exp: number };
     }
   }
 }
@@ -35,7 +35,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       return;
     }
 
-    req.user = { id: payload.sub, role: payload.role, jti: payload.jti };
+    req.user = { id: payload.sub, role: payload.role, jti: payload.jti, exp: payload.exp };
     next();
   } catch (err) {
     if (err instanceof jwt.TokenExpiredError) {
