@@ -53,7 +53,7 @@ banking-simulator/
 | Concern | Choice |
 |---|---|
 | API-level tests | Vitest + Supertest |
-| E2E tests | Playwright (per SPEC.md TASK 15) |
+| E2E tests | Out of scope |
 | Test selectors | `data-testid` attributes on all interactive/informational UI elements (no CSS class or text selectors) |
 | API exploration | Swagger UI for manually exercising endpoints |
 | Test data reset | `POST /api/v1/test/reset` — re-seeds the database to a known state; disabled when `NODE_ENV=production` |
