@@ -3,6 +3,11 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
+import AccountsPage from './pages/customer/AccountsPage';
+import CardsPage from './pages/customer/CardsPage';
+import TransferPage from './pages/customer/TransferPage';
+import SpendPage from './pages/customer/SpendPage';
+import RequestsPage from './pages/customer/RequestsPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import AdminOverview from './pages/admin/AdminOverview';
 
@@ -18,6 +23,51 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <CustomerDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/customer/accounts"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <AccountsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/customer/cards"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <CardsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/customer/transactions"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <TransferPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/customer/spend"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <SpendPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/customer/requests"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <RequestsPage />
               </ProtectedRoute>
             }
           />
