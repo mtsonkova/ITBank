@@ -73,6 +73,115 @@ router.get('/recent', authenticate, authorize('customer'), async (req, res, next
   }
 });
 
+// ─── POST /api/v1/transactions/spend ─────────────────────────────────────────
+/**
+ * @openapi
+ * /api/v1/transactions/spend:
+ *   post:
+ *     tags: [Transactions]
+ *     summary: Spend from an account, debit card, or credit card
+ */
+router.post('/spend', authenticate, authorize('customer'), async (req, res, next) => {
+  try {
+    const customerId = req.user!.id;
+    const { source_type, source_id, amount, description } = req.body as {
+      source_type?: string;
+      source_id?: string;
+      amount?: number;
+      description?: string;
+    };
+
+    if (!source_type || !source_id || !amount) {
+      throw new AppError(400, 'source_type, source_id and amount are required', 'MISSING_FIELDS');
+    }
+    if (!['account', 'debit_card', 'credit_card'].includes(source_type)) {
+      throw new AppError(400, 'source_type must be account, debit_card or credit_card', 'INVALID_SOURCE_TYPE');
+    }
+    if (amount <= 0) {
+      throw new AppError(422, 'Amount must be greater than €0.00', 'INVALID_AMOUNT');
+    }
+
+    if (source_type === 'account') {
+      const account = await prisma.bankAccount.findUnique({ where: { id: source_id } });
+      if (!account || account.customerId !== customerId) {
+        throw new AppError(404, 'Account not found', 'NOT_FOUND');
+      }
+      if (account.status !== 'active') {
+        throw new AppError(422, 'Account is not active', 'ACCOUNT_NOT_ACTIVE');
+      }
+      if (account.balance.toNumber() < amount) {
+        const sources = await buildTopUpSources(customerId, 'account', source_id);
+        throw new AppError(422, 'Insufficient funds', 'INSUFFICIENT_FUNDS', {
+          available_balance: account.balance.toString(),
+          required_amount: amount.toFixed(2),
+          top_up_sources: sources,
+        });
+      }
+      await prisma.$transaction([
+        prisma.bankAccount.update({ where: { id: account.id }, data: { balance: { decrement: amount } } }),
+        prisma.transaction.create({
+          data: { type: 'spend', fromAccountId: account.id, amount, description: description ?? null },
+        }),
+      ]);
+    } else if (source_type === 'debit_card') {
+      const card = await prisma.debitCard.findUnique({ where: { id: source_id }, include: { bankAccount: true } });
+      if (!card || card.customerId !== customerId) {
+        throw new AppError(404, 'Debit card not found', 'NOT_FOUND');
+      }
+      if (card.status !== 'active') {
+        throw new AppError(422, 'Debit card is not active', 'CARD_NOT_ACTIVE');
+      }
+      if (card.bankAccount.status !== 'active') {
+        throw new AppError(422, 'Linked account is not active', 'ACCOUNT_NOT_ACTIVE');
+      }
+      if (card.bankAccount.balance.toNumber() < amount) {
+        const sources = await buildTopUpSources(customerId, 'debit_card', source_id);
+        throw new AppError(422, 'Insufficient funds', 'INSUFFICIENT_FUNDS', {
+          available_balance: card.bankAccount.balance.toString(),
+          required_amount: amount.toFixed(2),
+          top_up_sources: sources,
+        });
+      }
+      await prisma.$transaction([
+        prisma.bankAccount.update({ where: { id: card.bankAccountId }, data: { balance: { decrement: amount } } }),
+        prisma.transaction.create({
+          data: {
+            type: 'spend',
+            fromAccountId: card.bankAccountId,
+            debitCardId: card.id,
+            amount,
+            description: description ?? null,
+          },
+        }),
+      ]);
+    } else {
+      // credit_card — overdraft always permitted
+      const card = await prisma.creditCard.findUnique({ where: { id: source_id } });
+      if (!card || card.customerId !== customerId) {
+        throw new AppError(404, 'Credit card not found', 'NOT_FOUND');
+      }
+      if (card.status !== 'active') {
+        throw new AppError(422, 'Credit card is not active', 'CARD_NOT_ACTIVE');
+      }
+      await prisma.$transaction([
+        prisma.creditCard.update({ where: { id: card.id }, data: { outstandingBalance: { decrement: amount } } }),
+        prisma.transaction.create({
+          data: {
+            type: 'spend',
+            toCardId: card.id,
+            amount,
+            description: description ?? null,
+          },
+        }),
+      ]);
+    }
+
+    res.status(201).json({ message: 'Spend recorded' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── POST /api/v1/transactions/topup ─────────────────────────────────────────
 /**
  * @openapi
