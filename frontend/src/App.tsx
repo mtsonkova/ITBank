@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
 import AccountsPage from './pages/customer/AccountsPage';
+import CardsPage from './pages/customer/CardsPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import AdminOverview from './pages/admin/AdminOverview';
 
@@ -28,6 +29,15 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <AccountsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/customer/cards"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <CardsPage />
               </ProtectedRoute>
             }
           />

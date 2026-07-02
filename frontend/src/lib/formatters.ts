@@ -30,6 +30,13 @@ export function formatDateTime(isoDate: string): string {
   }).format(new Date(isoDate));
 }
 
+export function maskIBAN(iban: string): string {
+  if (iban.length < 8) return iban;
+  const prefix = iban.slice(0, 4);
+  const suffix = iban.slice(-4);
+  return `${prefix} **** **** **** ${suffix}`;
+}
+
 export function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
