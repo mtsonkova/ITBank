@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/authenticate';
 import { authorize } from '../middleware/authorize';
 import { AppError } from '../lib/AppError';
 import prisma from '../lib/prisma';
+import { Prisma } from '@prisma/client';
 
 const router = Router();
 
@@ -184,6 +185,292 @@ router.post('/topup', authenticate, authorize('customer'), async (req, res, next
     }
 
     res.status(201).json({ message: 'Top-up successful' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Helper: build top-up sources (accounts + debit cards, excl. closed) ──────
+async function buildTopUpSources(
+  customerId: string,
+  excludeType?: string,
+  excludeId?: string,
+): Promise<{ id: string; type: string; label: string; balance: string; status: string }[]> {
+  const [accounts, debitCards] = await Promise.all([
+    prisma.bankAccount.findMany({ where: { customerId, status: { not: 'closed' } } }),
+    prisma.debitCard.findMany({
+      where: { customerId, status: { not: 'closed' } },
+      include: { bankAccount: true },
+    }),
+  ]);
+
+  const sources: { id: string; type: string; label: string; balance: string; status: string }[] = [];
+
+  for (const a of accounts) {
+    if (excludeType === 'account' && excludeId === a.id) continue;
+    sources.push({
+      id: a.id,
+      type: 'account',
+      label: `${a.type.charAt(0).toUpperCase() + a.type.slice(1)} ${a.iban}`,
+      balance: a.balance.toString(),
+      status: a.status,
+    });
+  }
+
+  for (const c of debitCards) {
+    if (excludeType === 'debit_card' && excludeId === c.id) continue;
+    const effectiveStatus =
+      c.status === 'active' && c.bankAccount.status === 'active' ? 'active' : 'frozen';
+    sources.push({
+      id: c.id,
+      type: 'debit_card',
+      label: `Debit Card ${c.bankAccount.iban}`,
+      balance: c.bankAccount.balance.toString(),
+      status: effectiveStatus,
+    });
+  }
+
+  return sources;
+}
+
+// ─── POST /api/v1/transactions/deposit ───────────────────────────────────────
+/**
+ * @openapi
+ * /api/v1/transactions/deposit:
+ *   post:
+ *     tags: [Transactions]
+ *     summary: Deposit money into a customer's bank account
+ */
+router.post('/deposit', authenticate, authorize('customer'), async (req, res, next) => {
+  try {
+    const customerId = req.user!.id;
+    const { account_id, amount } = req.body as { account_id?: string; amount?: number };
+
+    if (!account_id || !amount) {
+      throw new AppError(400, 'account_id and amount are required', 'MISSING_FIELDS');
+    }
+    if (amount <= 0) {
+      throw new AppError(422, 'Amount must be greater than €0.00', 'INVALID_AMOUNT');
+    }
+
+    const account = await prisma.bankAccount.findUnique({ where: { id: account_id } });
+    if (!account || account.customerId !== customerId) {
+      throw new AppError(404, 'Account not found', 'NOT_FOUND');
+    }
+    if (account.status !== 'active') {
+      throw new AppError(422, 'Account is not active', 'ACCOUNT_NOT_ACTIVE');
+    }
+
+    await prisma.$transaction([
+      prisma.bankAccount.update({
+        where: { id: account.id },
+        data: { balance: { increment: amount } },
+      }),
+      prisma.transaction.create({
+        data: { type: 'deposit', toAccountId: account.id, amount },
+      }),
+    ]);
+
+    res.status(201).json({ message: 'Deposit successful' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /api/v1/transactions/transfer ──────────────────────────────────────
+/**
+ * @openapi
+ * /api/v1/transactions/transfer:
+ *   post:
+ *     tags: [Transactions]
+ *     summary: Same-customer transfer between any two instruments
+ */
+router.post('/transfer', authenticate, authorize('customer'), async (req, res, next) => {
+  try {
+    const customerId = req.user!.id;
+    const { from_type, from_id, to_type, to_id, amount, note } = req.body as {
+      from_type?: string;
+      from_id?: string;
+      to_type?: string;
+      to_id?: string;
+      amount?: number;
+      note?: string;
+    };
+
+    const VALID_TYPES = ['account', 'debit_card', 'credit_card'];
+    if (!from_type || !from_id || !to_type || !to_id || !amount) {
+      throw new AppError(400, 'from_type, from_id, to_type, to_id and amount are required', 'MISSING_FIELDS');
+    }
+    if (!VALID_TYPES.includes(from_type) || !VALID_TYPES.includes(to_type)) {
+      throw new AppError(400, 'Invalid instrument type', 'INVALID_TYPE');
+    }
+    if (amount <= 0) {
+      throw new AppError(422, 'Amount must be greater than €0.00', 'INVALID_AMOUNT');
+    }
+    if (from_type === to_type && from_id === to_id) {
+      throw new AppError(422, 'Cannot transfer to the same instrument', 'SAME_INSTRUMENT');
+    }
+
+    // ── Resolve source instrument ─────────────────────────────────────────────
+    let fromAccountId: string | null = null;
+    let fromCardId: string | null = null;
+    let fromCreditCardId: string | null = null;
+    let availableBalance: number | null = null;
+
+    if (from_type === 'account') {
+      const acct = await prisma.bankAccount.findUnique({ where: { id: from_id } });
+      if (!acct || acct.customerId !== customerId) throw new AppError(404, 'Source account not found', 'NOT_FOUND');
+      if (acct.status !== 'active') throw new AppError(422, 'Source account is not active', 'SOURCE_NOT_ACTIVE');
+      fromAccountId = acct.id;
+      availableBalance = acct.balance.toNumber();
+    } else if (from_type === 'debit_card') {
+      const card = await prisma.debitCard.findUnique({ where: { id: from_id }, include: { bankAccount: true } });
+      if (!card || card.customerId !== customerId) throw new AppError(404, 'Source debit card not found', 'NOT_FOUND');
+      if (card.status !== 'active') throw new AppError(422, 'Source debit card is not active', 'SOURCE_NOT_ACTIVE');
+      if (card.bankAccount.status !== 'active') throw new AppError(422, 'Linked account is not active', 'SOURCE_NOT_ACTIVE');
+      fromAccountId = card.bankAccountId;
+      fromCardId = card.id;
+      availableBalance = card.bankAccount.balance.toNumber();
+    } else {
+      // credit_card source — overdraft permitted
+      const card = await prisma.creditCard.findUnique({ where: { id: from_id } });
+      if (!card || card.customerId !== customerId) throw new AppError(404, 'Source credit card not found', 'NOT_FOUND');
+      if (card.status !== 'active') throw new AppError(422, 'Source credit card is not active', 'SOURCE_NOT_ACTIVE');
+      fromCreditCardId = card.id;
+    }
+
+    // ── Insufficient funds check ─────────────────────────────────────────────
+    if (availableBalance !== null && availableBalance < amount) {
+      const sources = await buildTopUpSources(customerId, from_type, from_id);
+      throw new AppError(422, 'Insufficient funds', 'INSUFFICIENT_FUNDS', {
+        available_balance: availableBalance.toFixed(2),
+        required_amount: amount.toFixed(2),
+        top_up_sources: sources,
+      });
+    }
+
+    // ── Resolve destination instrument ────────────────────────────────────────
+    let toAccountId: string | null = null;
+    let toCardId: string | null = null;
+
+    if (to_type === 'account') {
+      const acct = await prisma.bankAccount.findUnique({ where: { id: to_id } });
+      if (!acct || acct.customerId !== customerId) throw new AppError(404, 'Destination account not found', 'NOT_FOUND');
+      if (acct.status !== 'active') throw new AppError(422, 'Destination account is not active', 'DEST_NOT_ACTIVE');
+      toAccountId = acct.id;
+    } else if (to_type === 'debit_card') {
+      const card = await prisma.debitCard.findUnique({ where: { id: to_id }, include: { bankAccount: true } });
+      if (!card || card.customerId !== customerId) throw new AppError(404, 'Destination debit card not found', 'NOT_FOUND');
+      if (card.status !== 'active') throw new AppError(422, 'Destination debit card is not active', 'DEST_NOT_ACTIVE');
+      if (card.bankAccount.status !== 'active') throw new AppError(422, 'Linked account is not active', 'DEST_NOT_ACTIVE');
+      toAccountId = card.bankAccountId;
+    } else {
+      const card = await prisma.creditCard.findUnique({ where: { id: to_id } });
+      if (!card || card.customerId !== customerId) throw new AppError(404, 'Destination credit card not found', 'NOT_FOUND');
+      if (card.status !== 'active') throw new AppError(422, 'Destination credit card is not active', 'DEST_NOT_ACTIVE');
+      toCardId = card.id;
+    }
+
+    // ── Atomic transaction ────────────────────────────────────────────────────
+    const ops: Prisma.PrismaPromise<unknown>[] = [];
+
+    if (fromAccountId) {
+      ops.push(prisma.bankAccount.update({ where: { id: fromAccountId }, data: { balance: { decrement: amount } } }));
+    } else if (fromCreditCardId) {
+      ops.push(prisma.creditCard.update({ where: { id: fromCreditCardId }, data: { outstandingBalance: { decrement: amount } } }));
+    }
+
+    if (toAccountId) {
+      ops.push(prisma.bankAccount.update({ where: { id: toAccountId }, data: { balance: { increment: amount } } }));
+    } else if (toCardId) {
+      ops.push(prisma.creditCard.update({ where: { id: toCardId }, data: { outstandingBalance: { increment: amount } } }));
+    }
+
+    ops.push(
+      prisma.transaction.create({
+        data: {
+          type: 'transfer',
+          fromAccountId,
+          toAccountId,
+          fromCardId,
+          toCardId,
+          amount,
+          description: note ?? null,
+        },
+      }),
+    );
+
+    await prisma.$transaction(ops);
+    res.status(201).json({ message: 'Transfer successful' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /api/v1/transactions/transfer/external ─────────────────────────────
+/**
+ * @openapi
+ * /api/v1/transactions/transfer/external:
+ *   post:
+ *     tags: [Transactions]
+ *     summary: Cross-customer account-to-account transfer by IBAN
+ */
+router.post('/transfer/external', authenticate, authorize('customer'), async (req, res, next) => {
+  try {
+    const customerId = req.user!.id;
+    const { from_account_id, to_iban, amount } = req.body as {
+      from_account_id?: string;
+      to_iban?: string;
+      amount?: number;
+    };
+
+    if (!from_account_id || !to_iban || !amount) {
+      throw new AppError(400, 'from_account_id, to_iban and amount are required', 'MISSING_FIELDS');
+    }
+    if (amount <= 0) {
+      throw new AppError(422, 'Amount must be greater than €0.00', 'INVALID_AMOUNT');
+    }
+
+    const fromAccount = await prisma.bankAccount.findUnique({ where: { id: from_account_id } });
+    if (!fromAccount || fromAccount.customerId !== customerId) {
+      throw new AppError(404, 'Source account not found', 'NOT_FOUND');
+    }
+    if (fromAccount.status !== 'active') {
+      throw new AppError(422, 'Source account is not active', 'ACCOUNT_NOT_ACTIVE');
+    }
+    if (fromAccount.balance.toNumber() < amount) {
+      throw new AppError(422, 'Insufficient funds', 'INSUFFICIENT_FUNDS', {
+        available_balance: fromAccount.balance.toString(),
+        required_amount: amount.toFixed(2),
+      });
+    }
+
+    const normalised = to_iban.replace(/\s/g, '').toUpperCase();
+    const toAccount = await prisma.bankAccount.findFirst({ where: { iban: normalised } });
+    if (!toAccount) {
+      throw new AppError(404, 'Destination account not found', 'IBAN_NOT_FOUND');
+    }
+    if (toAccount.id === fromAccount.id) {
+      throw new AppError(422, 'Cannot transfer to the same account', 'SAME_ACCOUNT');
+    }
+    if (toAccount.status !== 'active') {
+      throw new AppError(422, 'Destination account is not active', 'DEST_NOT_ACTIVE');
+    }
+
+    await prisma.$transaction([
+      prisma.bankAccount.update({ where: { id: fromAccount.id }, data: { balance: { decrement: amount } } }),
+      prisma.bankAccount.update({ where: { id: toAccount.id }, data: { balance: { increment: amount } } }),
+      prisma.transaction.create({
+        data: {
+          type: 'transfer_external',
+          fromAccountId: fromAccount.id,
+          toAccountId: toAccount.id,
+          amount,
+        },
+      }),
+    ]);
+
+    res.status(201).json({ message: 'Transfer successful' });
   } catch (err) {
     next(err);
   }

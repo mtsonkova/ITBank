@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
 import AccountsPage from './pages/customer/AccountsPage';
 import CardsPage from './pages/customer/CardsPage';
+import TransferPage from './pages/customer/TransferPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import AdminOverview from './pages/admin/AdminOverview';
 
@@ -38,6 +39,15 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <CardsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/customer/transactions"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <TransferPage />
               </ProtectedRoute>
             }
           />
