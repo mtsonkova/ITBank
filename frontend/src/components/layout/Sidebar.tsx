@@ -15,7 +15,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: 'Dashboard',           path: '/customer/dashboard', testId: 'dashboard' },
     { label: 'Accounts',            path: '/customer/accounts',  testId: 'accounts'  },
     { label: 'Cards',               path: '/customer/cards',     testId: 'cards'     },
-    { label: 'Transfer & Pay',      path: '/customer/transfer',  testId: 'transfer'  },
+    { label: 'Transfer & Pay',      path: '/customer/transactions', testId: 'transfer'  },
     { label: 'Spend',               path: '/customer/spend',     testId: 'spend'     },
     { label: 'Transaction History', path: '/customer/history',   testId: 'history'   },
     { label: 'My Requests',         path: '/customer/requests',  testId: 'requests'  },
