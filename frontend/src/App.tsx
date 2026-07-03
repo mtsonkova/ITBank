@@ -9,6 +9,9 @@ import TransferPage from './pages/customer/TransferPage';
 import SpendPage from './pages/customer/SpendPage';
 import RequestsPage from './pages/customer/RequestsPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
+import ClientsPage from './pages/manager/ClientsPage';
+import ClientDetailPage from './pages/manager/ClientDetailPage';
+import ApprovalsPage from './pages/manager/ApprovalsPage';
 import AdminOverview from './pages/admin/AdminOverview';
 
 export default function App() {
@@ -77,6 +80,33 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['account_manager']}>
                 <ManagerDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/manager/clients"
+            element={
+              <ProtectedRoute allowedRoles={['account_manager']}>
+                <ClientsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/manager/clients/:id"
+            element={
+              <ProtectedRoute allowedRoles={['account_manager']}>
+                <ClientDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/manager/approvals"
+            element={
+              <ProtectedRoute allowedRoles={['account_manager']}>
+                <ApprovalsPage />
               </ProtectedRoute>
             }
           />
