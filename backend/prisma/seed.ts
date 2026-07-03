@@ -1,20 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
+import { generateIBAN } from '../src/lib/iban';
 
 const prisma = new PrismaClient();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function generateIBAN(): string {
-  const digits = String(Math.floor(Math.random() * 90 + 10)); // 10–99
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let body = '';
-  for (let i = 0; i < 16; i++) {
-    body += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return `IB${digits}${body}`; // 20 chars: IB + 2 digits + 16 alphanumeric
-}
 
 function randomAmount(min: number, max: number): number {
   return parseFloat((Math.random() * (max - min) + min).toFixed(2));
