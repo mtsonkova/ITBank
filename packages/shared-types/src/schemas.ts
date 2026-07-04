@@ -65,6 +65,27 @@ export const TransactionSchema = z.object({
 });
 export type Transaction = z.infer<typeof TransactionSchema>;
 
+// Instrument reference attached to a history row for display (label is built client-side)
+export const InstrumentRefSchema = z.object({
+  kind: z.enum(['account', 'debit_card', 'credit_card']),
+  id: z.string().uuid(),
+  iban: z.string().nullable(),
+  accountType: AccountTypeSchema.nullable(),
+});
+export type InstrumentRef = z.infer<typeof InstrumentRefSchema>;
+
+// A single row in a transaction history table (customer/manager/admin history pages)
+export const TransactionHistoryItemSchema = z.object({
+  id: z.string().uuid(),
+  type: TransactionTypeSchema,
+  amount: z.string(), // signed relative to the viewer's perspective, e.g. "-45.00" or "45.00"
+  description: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  instrument: InstrumentRefSchema.nullable(),
+  counterpart: InstrumentRefSchema.nullable(),
+});
+export type TransactionHistoryItem = z.infer<typeof TransactionHistoryItemSchema>;
+
 export const RequestSchema = z.object({
   id: z.string().uuid(),
   customerId: z.string().uuid(),

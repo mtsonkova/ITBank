@@ -6,6 +6,7 @@ import { AppShell } from '../../components/layout/AppShell';
 import api from '../../lib/axios';
 import { formatCurrency, formatIBAN, formatDate } from '../../lib/formatters';
 import { REQ_TYPE_LABELS } from '../../lib/requestLabels';
+import { ClientHistorySection } from '../../components/manager/ClientHistorySection';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Account {
@@ -468,6 +469,14 @@ export default function ClientDetailPage() {
             </ul>
           )}
         </Section>
+
+        {/* Transaction History */}
+        <ClientHistorySection
+          customerId={client.user.id}
+          accounts={client.accounts}
+          debitCards={client.debitCards}
+          creditCards={client.creditCards}
+        />
       </div>
 
       {/* Modals */}

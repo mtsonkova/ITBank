@@ -4,8 +4,57 @@ import { authorize } from '../middleware/authorize';
 import { AppError } from '../lib/AppError';
 import prisma from '../lib/prisma';
 import { Prisma } from '@prisma/client';
+import { resolveInstrumentIds } from '../services/historyService';
+import { handleHistoryRequest, type RawHistoryQuery } from './historyHandler';
 
 const router = Router();
+
+/**
+ * @openapi
+ * /api/v1/transactions/history:
+ *   get:
+ *     tags: [Transactions]
+ *     summary: Paginated transaction history for the authenticated customer
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         schema: { type: string }
+ *       - in: query
+ *         name: to
+ *         schema: { type: string }
+ *       - in: query
+ *         name: type
+ *         schema: { type: string }
+ *       - in: query
+ *         name: account_id
+ *         schema: { type: string }
+ *       - in: query
+ *         name: card_id
+ *         schema: { type: string }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: export
+ *         schema: { type: string, enum: [csv, xlsx, xls, ods, pdf] }
+ *     responses:
+ *       200:
+ *         description: Paginated transaction history, or a file download when `export` is set
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/history', authenticate, authorize('customer'), async (req, res, next) => {
+  try {
+    const customerId = req.user!.id;
+    const scope = await resolveInstrumentIds([customerId]);
+    await handleHistoryRequest(res, scope, req.query as RawHistoryQuery);
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * @openapi
