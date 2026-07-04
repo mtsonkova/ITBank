@@ -8,13 +8,16 @@ import CardsPage from './pages/customer/CardsPage';
 import TransferPage from './pages/customer/TransferPage';
 import SpendPage from './pages/customer/SpendPage';
 import RequestsPage from './pages/customer/RequestsPage';
+import HistoryPage from './pages/customer/HistoryPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import ClientsPage from './pages/manager/ClientsPage';
 import ClientDetailPage from './pages/manager/ClientDetailPage';
 import ApprovalsPage from './pages/manager/ApprovalsPage';
+import ManagerHistoryPage from './pages/manager/HistoryPage';
 import AdminOverview from './pages/admin/AdminOverview';
 import AdminApprovalsPage from './pages/admin/AdminApprovalsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminHistoryPage from './pages/admin/HistoryPage';
 
 export default function App() {
   return (
@@ -78,6 +81,15 @@ export default function App() {
           />
 
           <Route
+            path="/customer/history"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <HistoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/manager/dashboard"
             element={
               <ProtectedRoute allowedRoles={['account_manager']}>
@@ -114,6 +126,15 @@ export default function App() {
           />
 
           <Route
+            path="/manager/history"
+            element={
+              <ProtectedRoute allowedRoles={['account_manager']}>
+                <ManagerHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/admin/overview"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
@@ -136,6 +157,15 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminUsersPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/history"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminHistoryPage />
               </ProtectedRoute>
             }
           />
