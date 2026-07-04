@@ -14,6 +14,7 @@ import adminUsersRouter from './adminUsers';
 import adminRequestsRouter from './adminRequests';
 import adminTransactionsRouter from './adminTransactions';
 import testResetRouter from './testReset';
+import searchRouter from './search';
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use('/admin/users', adminUsersRouter);
 router.use('/admin/requests', adminRequestsRouter);
 router.use('/admin/transactions', adminTransactionsRouter);
 router.use('/test', testResetRouter);
+router.use('/search', searchRouter);
 
 export default router;

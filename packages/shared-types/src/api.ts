@@ -1,5 +1,12 @@
 import { z } from 'zod';
 import { RoleSchema } from './enums';
+import {
+  BankAccountSchema,
+  SearchCardItemSchema,
+  TransactionHistoryItemSchema,
+  UserSchema,
+  SearchManagerItemSchema,
+} from './schemas';
 
 // Generic success envelope — wrap any response shape: apiSuccess(MySchema)
 export function apiSuccess<T extends z.ZodTypeAny>(dataSchema: T) {
@@ -60,3 +67,15 @@ export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =
     limit: z.number().int(),
     totalPages: z.number().int(),
   });
+
+// GET /api/v1/search — each of the 5 groups is independently paginated with the
+// same page/limit query params; out-of-scope groups for a given role always
+// come back as an empty PaginatedResponse rather than being omitted.
+export const SearchResultsSchema = z.object({
+  accounts: PaginatedResponseSchema(BankAccountSchema),
+  cards: PaginatedResponseSchema(SearchCardItemSchema),
+  transactions: PaginatedResponseSchema(TransactionHistoryItemSchema),
+  users: PaginatedResponseSchema(UserSchema),
+  managers: PaginatedResponseSchema(SearchManagerItemSchema),
+});
+export type SearchResults = z.infer<typeof SearchResultsSchema>;
