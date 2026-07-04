@@ -13,6 +13,8 @@ import ClientsPage from './pages/manager/ClientsPage';
 import ClientDetailPage from './pages/manager/ClientDetailPage';
 import ApprovalsPage from './pages/manager/ApprovalsPage';
 import AdminOverview from './pages/admin/AdminOverview';
+import AdminApprovalsPage from './pages/admin/AdminApprovalsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
 
 export default function App() {
   return (
@@ -116,6 +118,24 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminOverview />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/approvals"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminApprovalsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminUsersPage />
               </ProtectedRoute>
             }
           />

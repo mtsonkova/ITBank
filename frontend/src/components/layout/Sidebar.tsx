@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import type { Role } from '@banking-simulator/shared-types';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal';
+import { ResetDatabaseModal } from '../modals/ResetDatabaseModal';
 
 interface NavItem {
   label: string;
@@ -37,6 +38,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
 export function Sidebar() {
   const { user } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
 
   if (!user) return null;
 
@@ -76,8 +78,8 @@ export function Sidebar() {
           ))}
         </nav>
 
-        {/* Change password — pinned bottom */}
-        <div className="px-3 pb-4 pt-2 border-t border-[#EEF4F7]">
+        {/* Change password / Reset database — pinned bottom */}
+        <div className="px-3 pb-4 pt-2 border-t border-[#EEF4F7] flex flex-col gap-0.5">
           <button
             type="button"
             onClick={() => setModalOpen(true)}
@@ -85,10 +87,21 @@ export function Sidebar() {
           >
             Change password
           </button>
+          {user.role === 'admin' && (
+            <button
+              type="button"
+              data-testid="btn-reset-database"
+              onClick={() => setResetModalOpen(true)}
+              className="w-full text-left px-3 py-2 rounded text-sm text-status-dangerText hover:bg-status-dangerBg transition-colors"
+            >
+              Reset Database
+            </button>
+          )}
         </div>
       </aside>
 
       {modalOpen && <ChangePasswordModal onClose={() => setModalOpen(false)} />}
+      {resetModalOpen && <ResetDatabaseModal onClose={() => setResetModalOpen(false)} />}
     </>
   );
 }

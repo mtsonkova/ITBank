@@ -8,7 +8,7 @@ import { applySideEffect } from '../services/managerService';
 
 const router = Router();
 
-export function serializeRequest(r: {
+function serializeRequest(r: {
   id: string;
   customerId: string;
   accountManagerId: string | null;
@@ -19,6 +19,7 @@ export function serializeRequest(r: {
   createdAt: Date;
   actionedAt: Date | null;
   customer?: { id: string; fullName: string; username: string };
+  accountManager?: { id: string; fullName: string; username: string } | null;
 }) {
   return {
     id: r.id,
@@ -31,21 +32,21 @@ export function serializeRequest(r: {
     createdAt: r.createdAt.toISOString(),
     actionedAt: r.actionedAt?.toISOString() ?? null,
     customer: r.customer,
+    accountManager: r.accountManager,
   };
 }
 
-// ─── GET /api/v1/manager/requests ─────────────────────────────────────────────
-router.get('/', authenticate, authorize('account_manager'), async (req, res, next) => {
+// ─── GET /api/v1/admin/requests ────────────────────────────────────────────────
+router.get('/', authenticate, authorize('admin'), async (req, res, next) => {
   try {
-    const managerId = req.user!.id;
     const { status } = req.query as { status?: string };
 
     const requests = await prisma.request.findMany({
-      where: {
-        accountManagerId: managerId,
-        ...(status ? { status: status as never } : {}),
+      where: status ? { status: status as never } : {},
+      include: {
+        customer: { select: { id: true, fullName: true, username: true } },
+        accountManager: { select: { id: true, fullName: true, username: true } },
       },
-      include: { customer: { select: { id: true, fullName: true, username: true } } },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -55,18 +56,16 @@ router.get('/', authenticate, authorize('account_manager'), async (req, res, nex
   }
 });
 
-// ─── POST /api/v1/manager/requests/:id/approve ────────────────────────────────
-router.post('/:id/approve', authenticate, authorize('account_manager'), async (req, res, next) => {
+// ─── POST /api/v1/admin/requests/:id/approve ───────────────────────────────────
+// Admin can approve any request regardless of assigned manager — the portfolio
+// check that gates the manager route is intentionally skipped here.
+router.post('/:id/approve', authenticate, authorize('admin'), async (req, res, next) => {
   try {
-    const managerId = req.user!.id;
     const { id } = req.params;
 
     const request = await prisma.request.findUnique({ where: { id } });
     if (!request) {
       throw new AppError(404, 'Request not found', 'NOT_FOUND');
-    }
-    if (request.accountManagerId !== managerId) {
-      throw new AppError(403, 'Request is not in your portfolio', 'FORBIDDEN');
     }
     if (request.status !== 'pending') {
       throw new AppError(422, 'Only pending requests can be approved', 'NOT_PENDING');
@@ -85,10 +84,9 @@ router.post('/:id/approve', authenticate, authorize('account_manager'), async (r
   }
 });
 
-// ─── POST /api/v1/manager/requests/:id/reject ─────────────────────────────────
-router.post('/:id/reject', authenticate, authorize('account_manager'), async (req, res, next) => {
+// ─── POST /api/v1/admin/requests/:id/reject ────────────────────────────────────
+router.post('/:id/reject', authenticate, authorize('admin'), async (req, res, next) => {
   try {
-    const managerId = req.user!.id;
     const { id } = req.params;
     const { reason } = req.body as { reason?: string };
 
@@ -99,9 +97,6 @@ router.post('/:id/reject', authenticate, authorize('account_manager'), async (re
     const request = await prisma.request.findUnique({ where: { id } });
     if (!request) {
       throw new AppError(404, 'Request not found', 'NOT_FOUND');
-    }
-    if (request.accountManagerId !== managerId) {
-      throw new AppError(403, 'Request is not in your portfolio', 'FORBIDDEN');
     }
     if (request.status !== 'pending') {
       throw new AppError(422, 'Only pending requests can be rejected', 'NOT_PENDING');

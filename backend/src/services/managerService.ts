@@ -1,9 +1,13 @@
 import prisma from '../lib/prisma';
 import { AppError } from '../lib/AppError';
 import { generateIBAN } from '../lib/iban';
-import type { AccountType } from '@prisma/client';
+import type { AccountType, RequestType } from '@prisma/client';
 
 type Status = 'active' | 'frozen' | 'closed';
+
+// New credit cards approved via a customer request carry no manager-chosen
+// limit (the request payload has none) — use a conservative default.
+const DEFAULT_CREDIT_LIMIT = 1000;
 
 // ─── Portfolio scoping ──────────────────────────────────────────────────────
 export async function requireClientInPortfolio(managerId: string, customerId: string) {
@@ -27,6 +31,49 @@ function assertTransition(current: Status, target: Status) {
   }
   if (target === 'closed' && current === 'closed') {
     throw new AppError(422, 'Already closed', 'ALREADY_CLOSED');
+  }
+}
+
+// ─── Request approval side-effect dispatch ─────────────────────────────────
+// Shared by the manager and admin approval routes so both call into the same
+// business-rule validation instead of duplicating it.
+export async function applySideEffect(
+  customerId: string,
+  type: RequestType,
+  payload: Record<string, unknown>,
+) {
+  switch (type) {
+    case 'open_account':
+      return openAccount(customerId, payload.type as AccountType);
+    case 'close_account':
+      return setAccountStatus(customerId, payload.account_id as string, 'closed');
+    case 'freeze_account':
+      return setAccountStatus(customerId, payload.account_id as string, 'frozen');
+    case 'unfreeze_account':
+      return setAccountStatus(customerId, payload.account_id as string, 'active');
+    case 'issue_debit_card':
+      return issueDebitCard(customerId, payload.account_id as string);
+    case 'close_debit_card':
+      return setDebitCardStatus(customerId, payload.card_id as string, 'closed');
+    case 'freeze_debit_card':
+      return setDebitCardStatus(customerId, payload.card_id as string, 'frozen');
+    case 'unfreeze_debit_card':
+      return setDebitCardStatus(customerId, payload.card_id as string, 'active');
+    case 'issue_credit_card':
+      return issueCreditCard(customerId, DEFAULT_CREDIT_LIMIT);
+    case 'close_credit_card':
+      return setCreditCardStatus(customerId, payload.card_id as string, 'closed');
+    case 'freeze_credit_card':
+      return setCreditCardStatus(customerId, payload.card_id as string, 'frozen');
+    case 'unfreeze_credit_card':
+      return setCreditCardStatus(customerId, payload.card_id as string, 'active');
+    case 'increase_credit_limit':
+    case 'decrease_credit_limit':
+      return updateCreditLimit(customerId, payload.card_id as string, payload.new_limit as number);
+    case 'withdraw_money':
+      return withdrawMoney(customerId, payload.account_id as string, payload.amount as number);
+    default:
+      throw new AppError(400, `Unsupported request type: ${type}`, 'INVALID_REQUEST_TYPE');
   }
 }
 
