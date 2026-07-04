@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Role } from '@banking-simulator/shared-types';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../lib/axios';
+import { SearchBar } from '../search/SearchBar';
 
 const ROLE_LABELS: Record<Role, string> = {
   customer: 'Customer',
@@ -45,12 +46,8 @@ export function Header({ pageTitle }: Props) {
         {pageTitle}
       </h1>
 
-      {/* Search pill — placeholder, functional in M6 */}
-      <div className="flex-1 max-w-xs">
-        <div className="rounded-full bg-white/10 text-white/50 px-4 py-1.5 text-sm cursor-default select-none">
-          Search…
-        </div>
-      </div>
+      {/* Search pill */}
+      <SearchBar />
 
       {/* User block */}
       <div className="ml-auto flex items-center gap-3">

@@ -75,7 +75,7 @@ function parseToDate(raw: unknown): Date | undefined {
 }
 
 // ─── WHERE clause construction ─────────────────────────────────────────────────
-function scopeOrClause(scope: HistoryScope): Prisma.TransactionWhereInput {
+export function scopeOrClause(scope: HistoryScope): Prisma.TransactionWhereInput {
   return {
     OR: [
       { fromAccountId: { in: scope.accountIds } },
@@ -122,7 +122,7 @@ export function buildHistoryWhere(filters: {
 }
 
 // ─── Row serialization (labels + signed amount from the viewer's perspective) ──
-async function serializeRows(rows: TransactionRow[], scope: HistoryScope | null): Promise<TransactionHistoryItem[]> {
+export async function serializeRows(rows: TransactionRow[], scope: HistoryScope | null): Promise<TransactionHistoryItem[]> {
   const accountIds = new Set<string>();
   const debitCardIds = new Set<string>();
   const creditCardIds = new Set<string>();

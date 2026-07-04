@@ -86,6 +86,26 @@ export const TransactionHistoryItemSchema = z.object({
 });
 export type TransactionHistoryItem = z.infer<typeof TransactionHistoryItemSchema>;
 
+// A single row in the search results "cards" group — debit and credit cards merged,
+// discriminated by cardType since the two Prisma models don't share a table.
+export const SearchCardItemSchema = z.object({
+  id: z.string().uuid(),
+  cardType: z.enum(['debit', 'credit']),
+  customerId: z.string().uuid(),
+  status: CardStatusSchema,
+  iban: z.string().nullable(), // linked account IBAN, debit cards only
+  creditLimit: z.string().nullable(), // credit cards only
+  outstandingBalance: z.string().nullable(), // credit cards only
+  createdAt: z.string().datetime(),
+});
+export type SearchCardItem = z.infer<typeof SearchCardItemSchema>;
+
+// A row in the search results "managers" group (admin scope only)
+export const SearchManagerItemSchema = UserSchema.extend({
+  clientCount: z.number().int(),
+});
+export type SearchManagerItem = z.infer<typeof SearchManagerItemSchema>;
+
 export const RequestSchema = z.object({
   id: z.string().uuid(),
   customerId: z.string().uuid(),
