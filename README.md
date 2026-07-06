@@ -34,9 +34,10 @@ cp frontend/.env.example frontend/.env
 
 Edit `backend/.env` if your DB credentials differ from the defaults.
 
-### 4. Run migrations and seed
+### 4. Generate the Prisma client, run migrations, and seed
 
 ```bash
+npm run db:generate
 npm run db:migrate
 npm run db:seed
 ```
@@ -84,3 +85,19 @@ curl -X POST http://localhost:3000/api/v1/test/reset
 ```bash
 npm test
 ```
+
+## Type checking & builds
+
+```bash
+cd backend && npm run build                # tsc
+cd frontend && npm run typecheck           # tsc --noEmit
+cd frontend && npm run build               # tsc && vite build
+cd packages/shared-types && npm run typecheck
+```
+
+## Troubleshooting
+
+- **`ECONNREFUSED` on backend startup** — Postgres isn't reachable. Check `docker compose ps` and confirm `DATABASE_URL` in `backend/.env` matches the container's credentials/port.
+- **Prisma client errors ("did you forget to run generate?")** — run `npm run db:generate`.
+- **Port already in use (3000 or 5173)** — find and stop the other process (`lsof -i:3000`), or change `PORT` in `backend/.env` (and `VITE_API_BASE_URL` in `frontend/.env` to match).
+- **Login always fails** — confirm the DB was seeded (`npm run db:seed`) and that you're using `Password123!`.
