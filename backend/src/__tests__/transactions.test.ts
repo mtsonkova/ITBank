@@ -362,14 +362,14 @@ describe('INSUFFICIENT_FUNDS response — top_up_sources', () => {
 // ─── Top-up amount validation ──────────────────────────────────────────────────
 
 describe('POST /api/v1/transactions/topup', () => {
-  it('returns 400 when amount is 0 (falsy guard treats it as missing)', async () => {
+  it('returns 422 INVALID_AMOUNT when amount is 0', async () => {
     const res = await request(app)
       .post('/api/v1/transactions/topup')
       .set('Authorization', `Bearer ${makeToken()}`)
       .send({ from_type: 'account', from_id: 'acct-1', to_card_id: 'cc-1', amount: 0 });
 
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe('MISSING_FIELDS');
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('INVALID_AMOUNT');
   });
 
   it('returns 422 INVALID_AMOUNT when amount is negative', async () => {

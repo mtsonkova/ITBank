@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { AppShell } from '../../components/layout/AppShell';
 import { RequestActions } from '../../components/manager/RequestActions';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
 import { formatDate } from '../../lib/formatters';
 import { REQ_TYPE_LABELS } from '../../lib/requestLabels';
 
@@ -43,11 +44,6 @@ const fetchPendingRequests = () =>
     .get<{ data: ManagerRequest[] }>('/api/v1/manager/requests?status=pending')
     .then((r) => r.data.data);
 
-function apiError(err: unknown): string {
-  if (axios.isAxiosError(err)) return err.response?.data?.error ?? 'Something went wrong';
-  return 'Something went wrong';
-}
-
 // ─── Stat card ────────────────────────────────────────────────────────────────
 function StatCard({
   label,
@@ -84,20 +80,26 @@ export default function ManagerDashboard() {
     queryFn: fetchPendingRequests,
   });
 
+  const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
+
   const approveMutation = useMutation({
     mutationFn: (id: string) => api.post(`/api/v1/manager/requests/${id}/approve`).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['managerRequests'] });
       qc.invalidateQueries({ queryKey: ['managerClients'] });
+      setMsg({ text: 'Request approved', error: false });
     },
-    onError: (err) => alert(apiError(err)),
+    onError: (err) => setMsg({ text: apiError(err), error: true }),
   });
 
   const rejectMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       api.post(`/api/v1/manager/requests/${id}/reject`, { reason }).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['managerRequests'] }),
-    onError: (err) => alert(apiError(err)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['managerRequests'] });
+      setMsg({ text: 'Request rejected', error: false });
+    },
+    onError: (err) => setMsg({ text: apiError(err), error: true }),
   });
 
   const frozenItems = clients.reduce(
@@ -119,6 +121,19 @@ export default function ManagerDashboard() {
             {user?.fullName} · {clients.length} assigned {clients.length === 1 ? 'client' : 'clients'}
           </p>
         </div>
+
+        {msg && (
+          <p
+            data-testid={msg.error ? 'msg-error' : 'msg-success'}
+            className={`text-sm rounded px-3 py-2 ${
+              msg.error
+                ? 'text-status-errorText bg-status-errorBg'
+                : 'text-status-successText bg-status-successBg'
+            }`}
+          >
+            {msg.text}
+          </p>
+        )}
 
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,6 +1,14 @@
 import { Router } from 'express';
+import {
+  SpendBodySchema,
+  TopUpBodySchema,
+  DepositBodySchema,
+  TransferBodySchema,
+  TransferExternalBodySchema,
+} from '@banking-simulator/shared-types';
 import { authenticate } from '../middleware/authenticate';
 import { authorize } from '../middleware/authorize';
+import { validateBody } from '../middleware/validateBody';
 import { AppError } from '../lib/AppError';
 import prisma from '../lib/prisma';
 import { Prisma } from '@prisma/client';
@@ -130,22 +138,16 @@ router.get('/recent', authenticate, authorize('customer'), async (req, res, next
  *     tags: [Transactions]
  *     summary: Spend from an account, debit card, or credit card
  */
-router.post('/spend', authenticate, authorize('customer'), async (req, res, next) => {
+router.post('/spend', authenticate, authorize('customer'), validateBody(SpendBodySchema), async (req, res, next) => {
   try {
     const customerId = req.user!.id;
     const { source_type, source_id, amount, description } = req.body as {
-      source_type?: string;
-      source_id?: string;
-      amount?: number;
+      source_type: 'account' | 'debit_card' | 'credit_card';
+      source_id: string;
+      amount: number;
       description?: string;
     };
 
-    if (!source_type || !source_id || !amount) {
-      throw new AppError(400, 'source_type, source_id and amount are required', 'MISSING_FIELDS');
-    }
-    if (!['account', 'debit_card', 'credit_card'].includes(source_type)) {
-      throw new AppError(400, 'source_type must be account, debit_card or credit_card', 'INVALID_SOURCE_TYPE');
-    }
     if (amount <= 0) {
       throw new AppError(422, 'Amount must be greater than €0.00', 'INVALID_AMOUNT');
     }
@@ -239,22 +241,16 @@ router.post('/spend', authenticate, authorize('customer'), async (req, res, next
  *     tags: [Transactions]
  *     summary: Top up a credit card from an account or debit card
  */
-router.post('/topup', authenticate, authorize('customer'), async (req, res, next) => {
+router.post('/topup', authenticate, authorize('customer'), validateBody(TopUpBodySchema), async (req, res, next) => {
   try {
     const customerId = req.user!.id;
     const { from_type, from_id, to_card_id, amount } = req.body as {
-      from_type?: string;
-      from_id?: string;
-      to_card_id?: string;
-      amount?: number;
+      from_type: 'account' | 'debit_card';
+      from_id: string;
+      to_card_id: string;
+      amount: number;
     };
 
-    if (!from_type || !from_id || !to_card_id || !amount) {
-      throw new AppError(400, 'from_type, from_id, to_card_id and amount are required', 'MISSING_FIELDS');
-    }
-    if (!['account', 'debit_card'].includes(from_type)) {
-      throw new AppError(400, 'from_type must be account or debit_card', 'INVALID_FROM_TYPE');
-    }
     if (amount <= 0) {
       throw new AppError(422, 'Amount must be greater than €0.00', 'INVALID_AMOUNT');
     }
@@ -399,14 +395,11 @@ async function buildTopUpSources(
  *     tags: [Transactions]
  *     summary: Deposit money into a customer's bank account
  */
-router.post('/deposit', authenticate, authorize('customer'), async (req, res, next) => {
+router.post('/deposit', authenticate, authorize('customer'), validateBody(DepositBodySchema), async (req, res, next) => {
   try {
     const customerId = req.user!.id;
-    const { account_id, amount } = req.body as { account_id?: string; amount?: number };
+    const { account_id, amount } = req.body as { account_id: string; amount: number };
 
-    if (!account_id || !amount) {
-      throw new AppError(400, 'account_id and amount are required', 'MISSING_FIELDS');
-    }
     if (amount <= 0) {
       throw new AppError(422, 'Amount must be greater than €0.00', 'INVALID_AMOUNT');
     }
@@ -443,25 +436,18 @@ router.post('/deposit', authenticate, authorize('customer'), async (req, res, ne
  *     tags: [Transactions]
  *     summary: Same-customer transfer between any two instruments
  */
-router.post('/transfer', authenticate, authorize('customer'), async (req, res, next) => {
+router.post('/transfer', authenticate, authorize('customer'), validateBody(TransferBodySchema), async (req, res, next) => {
   try {
     const customerId = req.user!.id;
     const { from_type, from_id, to_type, to_id, amount, note } = req.body as {
-      from_type?: string;
-      from_id?: string;
-      to_type?: string;
-      to_id?: string;
-      amount?: number;
+      from_type: 'account' | 'debit_card' | 'credit_card';
+      from_id: string;
+      to_type: 'account' | 'debit_card' | 'credit_card';
+      to_id: string;
+      amount: number;
       note?: string;
     };
 
-    const VALID_TYPES = ['account', 'debit_card', 'credit_card'];
-    if (!from_type || !from_id || !to_type || !to_id || !amount) {
-      throw new AppError(400, 'from_type, from_id, to_type, to_id and amount are required', 'MISSING_FIELDS');
-    }
-    if (!VALID_TYPES.includes(from_type) || !VALID_TYPES.includes(to_type)) {
-      throw new AppError(400, 'Invalid instrument type', 'INVALID_TYPE');
-    }
     if (amount <= 0) {
       throw new AppError(422, 'Amount must be greater than €0.00', 'INVALID_AMOUNT');
     }
@@ -573,18 +559,15 @@ router.post('/transfer', authenticate, authorize('customer'), async (req, res, n
  *     tags: [Transactions]
  *     summary: Cross-customer account-to-account transfer by IBAN
  */
-router.post('/transfer/external', authenticate, authorize('customer'), async (req, res, next) => {
+router.post('/transfer/external', authenticate, authorize('customer'), validateBody(TransferExternalBodySchema), async (req, res, next) => {
   try {
     const customerId = req.user!.id;
     const { from_account_id, to_iban, amount } = req.body as {
-      from_account_id?: string;
-      to_iban?: string;
-      amount?: number;
+      from_account_id: string;
+      to_iban: string;
+      amount: number;
     };
 
-    if (!from_account_id || !to_iban || !amount) {
-      throw new AppError(400, 'from_account_id, to_iban and amount are required', 'MISSING_FIELDS');
-    }
     if (amount <= 0) {
       throw new AppError(422, 'Amount must be greater than €0.00', 'INVALID_AMOUNT');
     }

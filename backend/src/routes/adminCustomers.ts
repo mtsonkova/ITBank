@@ -1,7 +1,8 @@
 import { Router } from 'express';
+import { AddCustomerAdminBodySchema, ReassignBodySchema } from '@banking-simulator/shared-types';
 import { authenticate } from '../middleware/authenticate';
 import { authorize } from '../middleware/authorize';
-import { AppError } from '../lib/AppError';
+import { validateBody } from '../middleware/validateBody';
 import { listCustomers, createCustomer, reassignCustomer } from '../services/adminService';
 
 const router = Router();
@@ -35,18 +36,14 @@ router.get('/', authenticate, authorize('admin'), async (_req, res, next) => {
 });
 
 // ─── POST /api/v1/admin/customers ──────────────────────────────────────────────
-router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
+router.post('/', authenticate, authorize('admin'), validateBody(AddCustomerAdminBodySchema), async (req, res, next) => {
   try {
     const { fullName, username, password, managerId } = req.body as {
-      fullName?: string;
-      username?: string;
-      password?: string;
-      managerId?: string;
+      fullName: string;
+      username: string;
+      password: string;
+      managerId: string;
     };
-
-    if (!fullName || !username || !password || !managerId) {
-      throw new AppError(400, 'fullName, username, password and managerId are required', 'MISSING_FIELDS');
-    }
 
     const customer = await createCustomer(fullName, username, password, managerId);
     res.status(201).json({
@@ -59,12 +56,9 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
 });
 
 // ─── PATCH /api/v1/admin/customers/:id/reassign ────────────────────────────────
-router.patch('/:id/reassign', authenticate, authorize('admin'), async (req, res, next) => {
+router.patch('/:id/reassign', authenticate, authorize('admin'), validateBody(ReassignBodySchema), async (req, res, next) => {
   try {
-    const { toManagerId } = req.body as { toManagerId?: string };
-    if (!toManagerId) {
-      throw new AppError(400, 'toManagerId is required', 'MISSING_FIELDS');
-    }
+    const { toManagerId } = req.body as { toManagerId: string };
 
     await reassignCustomer(req.params.id, toManagerId);
     res.json({ message: 'Customer reassigned successfully' });

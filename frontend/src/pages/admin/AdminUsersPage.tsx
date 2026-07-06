@@ -1,8 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import {
+  AddManagerBodySchema,
+  AddCustomerAdminBodySchema,
+  ReassignBodySchema,
+  AdminResetPasswordBodySchema,
+} from '@banking-simulator/shared-types';
 import { AppShell } from '../../components/layout/AppShell';
 import api from '../../lib/axios';
+import { apiError, apiFieldErrors } from '../../lib/apiError';
+import { zodFieldErrors } from '../../lib/validation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AdminManager {
@@ -20,11 +27,6 @@ interface AdminCustomer {
   createdAt: string;
   managerId: string | null;
   managerName: string | null;
-}
-
-function apiError(err: unknown): string {
-  if (axios.isAxiosError(err)) return err.response?.data?.error ?? 'Something went wrong';
-  return 'Something went wrong';
 }
 
 function getInitials(fullName: string): string {
@@ -80,7 +82,7 @@ export default function AdminUsersPage() {
               <h2 className="font-display font-semibold text-[#0F172A]">Account Managers</h2>
               <button
                 type="button"
-                data-testid="btn-add-manager"
+                data-testid="add-manager"
                 onClick={() => setAddManagerOpen(true)}
                 className="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-ui font-semibold hover:bg-brand-deep transition-colors"
               >
@@ -114,7 +116,7 @@ export default function AdminUsersPage() {
                     <div className="flex gap-2 shrink-0">
                       <button
                         type="button"
-                        data-testid={`btn-reassign-all-${m.id}`}
+                        data-testid={`reassign-${m.id}`}
                         onClick={() => setReassignAllFor(m)}
                         className="text-xs font-semibold text-brand-primary hover:text-brand-deep border border-border-outline hover:border-brand-primary px-3 py-1 rounded-lg transition-colors"
                       >
@@ -122,7 +124,7 @@ export default function AdminUsersPage() {
                       </button>
                       <button
                         type="button"
-                        data-testid={`btn-remove-manager-${m.id}`}
+                        data-testid={`remove-manager-${m.id}`}
                         disabled={m.clientCount > 0}
                         onClick={() => setRemoveManagerFor(m)}
                         className="text-xs font-semibold text-status-dangerText border border-status-dangerText/40 hover:bg-status-dangerBg px-3 py-1 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -142,7 +144,7 @@ export default function AdminUsersPage() {
               <h2 className="font-display font-semibold text-[#0F172A]">Customers</h2>
               <button
                 type="button"
-                data-testid="btn-add-customer"
+                data-testid="add-customer-admin"
                 onClick={() => setAddCustomerOpen(true)}
                 className="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-ui font-semibold hover:bg-brand-deep transition-colors"
               >
@@ -176,7 +178,7 @@ export default function AdminUsersPage() {
                     <div className="flex gap-2 shrink-0">
                       <button
                         type="button"
-                        data-testid={`btn-reassign-customer-${c.id}`}
+                        data-testid={`reassign-${c.id}`}
                         onClick={() => setReassignCustomerFor(c)}
                         className="text-xs font-semibold text-brand-primary hover:text-brand-deep border border-border-outline hover:border-brand-primary px-3 py-1 rounded-lg transition-colors"
                       >
@@ -184,7 +186,7 @@ export default function AdminUsersPage() {
                       </button>
                       <button
                         type="button"
-                        data-testid={`btn-reset-password-${c.id}`}
+                        data-testid={`reset-pw-${c.id}`}
                         onClick={() => setResetPasswordFor(c)}
                         className="text-xs font-semibold text-brand-primary hover:text-brand-deep border border-border-outline hover:border-brand-primary px-3 py-1 rounded-lg transition-colors"
                       >
@@ -294,6 +296,7 @@ function AddManagerModal({ onClose, onCreated }: { onClose: () => void; onCreate
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const createManager = useMutation({
     mutationFn: () =>
@@ -307,11 +310,18 @@ function AddManagerModal({ onClose, onCreated }: { onClose: () => void; onCreate
     onError: (err) => {
       setStatus('error');
       setMessage(apiError(err));
+      setFieldErrors(apiFieldErrors(err));
     },
   });
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const result = AddManagerBodySchema.safeParse({ fullName, username, password });
+    if (!result.success) {
+      setFieldErrors(zodFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
     setStatus('loading');
     setMessage('');
     createManager.mutate();
@@ -326,10 +336,10 @@ function AddManagerModal({ onClose, onCreated }: { onClose: () => void; onCreate
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            required
             data-testid="input-full-name"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           />
+          {fieldErrors.fullName && <p className="text-xs text-status-dangerText">{fieldErrors.fullName}</p>}
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[#4A5A67]">Username</label>
@@ -337,10 +347,10 @@ function AddManagerModal({ onClose, onCreated }: { onClose: () => void; onCreate
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            required
             data-testid="input-username"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           />
+          {fieldErrors.username && <p className="text-xs text-status-dangerText">{fieldErrors.username}</p>}
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[#4A5A67]">Password</label>
@@ -348,10 +358,10 @@ function AddManagerModal({ onClose, onCreated }: { onClose: () => void; onCreate
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
             data-testid="input-password"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           />
+          {fieldErrors.password && <p className="text-xs text-status-dangerText">{fieldErrors.password}</p>}
         </div>
 
         <StatusMessages status={status} message={message} />
@@ -446,6 +456,7 @@ function AddCustomerModal({
   const [managerId, setManagerId] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const createCustomer = useMutation({
     mutationFn: () =>
@@ -459,11 +470,18 @@ function AddCustomerModal({
     onError: (err) => {
       setStatus('error');
       setMessage(apiError(err));
+      setFieldErrors(apiFieldErrors(err));
     },
   });
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const result = AddCustomerAdminBodySchema.safeParse({ fullName, username, password, managerId });
+    if (!result.success) {
+      setFieldErrors(zodFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
     setStatus('loading');
     setMessage('');
     createCustomer.mutate();
@@ -478,10 +496,10 @@ function AddCustomerModal({
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            required
             data-testid="input-full-name"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           />
+          {fieldErrors.fullName && <p className="text-xs text-status-dangerText">{fieldErrors.fullName}</p>}
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[#4A5A67]">Username</label>
@@ -489,10 +507,10 @@ function AddCustomerModal({
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            required
             data-testid="input-username"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           />
+          {fieldErrors.username && <p className="text-xs text-status-dangerText">{fieldErrors.username}</p>}
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[#4A5A67]">Password</label>
@@ -500,17 +518,16 @@ function AddCustomerModal({
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
             data-testid="input-password"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           />
+          {fieldErrors.password && <p className="text-xs text-status-dangerText">{fieldErrors.password}</p>}
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[#4A5A67]">Assign to manager</label>
           <select
             value={managerId}
             onChange={(e) => setManagerId(e.target.value)}
-            required
             data-testid="select-manager"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           >
@@ -521,6 +538,7 @@ function AddCustomerModal({
               </option>
             ))}
           </select>
+          {fieldErrors.managerId && <p className="text-xs text-status-dangerText">{fieldErrors.managerId}</p>}
         </div>
 
         <StatusMessages status={status} message={message} />
@@ -553,6 +571,7 @@ function ReassignAllModal({
   const [toManagerId, setToManagerId] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const targets = managers.filter((m) => m.id !== manager.id);
 
@@ -568,11 +587,18 @@ function ReassignAllModal({
     onError: (err) => {
       setStatus('error');
       setMessage(apiError(err));
+      setFieldErrors(apiFieldErrors(err));
     },
   });
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const result = ReassignBodySchema.safeParse({ toManagerId });
+    if (!result.success) {
+      setFieldErrors(zodFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
     setStatus('loading');
     setMessage('');
     reassignAll.mutate();
@@ -590,7 +616,6 @@ function ReassignAllModal({
           <select
             value={toManagerId}
             onChange={(e) => setToManagerId(e.target.value)}
-            required
             data-testid="select-manager"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           >
@@ -601,6 +626,7 @@ function ReassignAllModal({
               </option>
             ))}
           </select>
+          {fieldErrors.toManagerId && <p className="text-xs text-status-dangerText">{fieldErrors.toManagerId}</p>}
         </div>
 
         <StatusMessages status={status} message={message} />
@@ -633,6 +659,7 @@ function ReassignCustomerModal({
   const [toManagerId, setToManagerId] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const targets = managers.filter((m) => m.id !== customer.managerId);
 
@@ -648,11 +675,18 @@ function ReassignCustomerModal({
     onError: (err) => {
       setStatus('error');
       setMessage(apiError(err));
+      setFieldErrors(apiFieldErrors(err));
     },
   });
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const result = ReassignBodySchema.safeParse({ toManagerId });
+    if (!result.success) {
+      setFieldErrors(zodFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
     setStatus('loading');
     setMessage('');
     reassign.mutate();
@@ -666,7 +700,6 @@ function ReassignCustomerModal({
           <select
             value={toManagerId}
             onChange={(e) => setToManagerId(e.target.value)}
-            required
             data-testid="select-manager"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           >
@@ -677,6 +710,7 @@ function ReassignCustomerModal({
               </option>
             ))}
           </select>
+          {fieldErrors.toManagerId && <p className="text-xs text-status-dangerText">{fieldErrors.toManagerId}</p>}
         </div>
 
         <StatusMessages status={status} message={message} />
@@ -705,6 +739,7 @@ function ResetPasswordModal({
   const [newPassword, setNewPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const resetPassword = useMutation({
     mutationFn: () =>
@@ -716,11 +751,18 @@ function ResetPasswordModal({
     onError: (err) => {
       setStatus('error');
       setMessage(apiError(err));
+      setFieldErrors(apiFieldErrors(err));
     },
   });
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const result = AdminResetPasswordBodySchema.safeParse({ newPassword });
+    if (!result.success) {
+      setFieldErrors(zodFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
     setStatus('loading');
     setMessage('');
     resetPassword.mutate();
@@ -735,10 +777,10 @@ function ResetPasswordModal({
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            required
             data-testid="input-new-password"
             className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
           />
+          {fieldErrors.newPassword && <p className="text-xs text-status-dangerText">{fieldErrors.newPassword}</p>}
         </div>
 
         <StatusMessages status={status} message={message} />

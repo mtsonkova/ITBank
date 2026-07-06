@@ -1,9 +1,10 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import type { Role } from '@banking-simulator/shared-types';
+import { LoginBodySchema, type Role } from '@banking-simulator/shared-types';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/axios';
+import { zodFieldErrors } from '../lib/validation';
 
 const ROLE_HOME: Record<Role, string> = {
   customer: '/customer/dashboard',
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string }>({});
 
   // Redirect immediately if already authenticated
   useEffect(() => {
@@ -28,6 +30,12 @@ export default function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+    const result = LoginBodySchema.safeParse({ username, password });
+    if (!result.success) {
+      setFieldErrors(zodFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
     setLoading(true);
     try {
       const { data } = await api.post<{
@@ -77,12 +85,12 @@ export default function LoginPage() {
               id="username"
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
+              onChange={(e) => { setUsername(e.target.value); setFieldErrors((f) => ({ ...f, username: undefined })); }}
               autoComplete="username"
               data-testid="login-username"
               className="border border-border-input rounded px-3 py-2 text-sm text-[#0F172A] outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary/60"
             />
+            {fieldErrors.username && <p className="text-xs text-status-dangerText">{fieldErrors.username}</p>}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -93,12 +101,12 @@ export default function LoginPage() {
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+              onChange={(e) => { setPassword(e.target.value); setFieldErrors((f) => ({ ...f, password: undefined })); }}
               autoComplete="current-password"
               data-testid="login-password"
               className="border border-border-input rounded px-3 py-2 text-sm text-[#0F172A] outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary/60"
             />
+            {fieldErrors.password && <p className="text-xs text-status-dangerText">{fieldErrors.password}</p>}
           </div>
 
           {error && (

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { AppShell } from '../../components/layout/AppShell';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
 import { formatCurrency, maskIBAN, formatDate } from '../../lib/formatters';
 import type { BankAccount, DebitCard, CreditCard, Request } from '@banking-simulator/shared-types';
 
@@ -53,11 +53,6 @@ const REQ_STATUS_CLASSES: Record<string, string> = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function apiError(err: unknown): string {
-  if (axios.isAxiosError(err)) return err.response?.data?.error ?? 'Something went wrong';
-  return 'Something went wrong';
-}
-
 function hasPendingReq(
   requests: Request[],
   type: string,
@@ -89,11 +84,17 @@ const fetchRequests = () =>
 export default function CardsPage() {
   const qc = useQueryClient();
   const [modal, setModal] = useState<ModalKind>(null);
+  const [modalError, setModalError] = useState('');
 
   // Per-card inline feedback
   const [actionMsg, setActionMsg] = useState<{ id: string; text: string; error: boolean } | null>(
     null,
   );
+
+  function closeModal() {
+    setModal(null);
+    setModalError('');
+  }
 
   const { data: accounts = [] } = useQuery({ queryKey: ['accounts'], queryFn: fetchAccounts });
   const { data: debitCards = [] } = useQuery({ queryKey: ['debitCards'], queryFn: fetchDebitCards });
@@ -305,18 +306,20 @@ export default function CardsPage() {
         <IssueDebitModal
           accounts={modal.accounts.filter((a) => a.status === 'active')}
           submitting={createReq.isPending}
+          error={modalError}
           onSubmit={async (accountId) => {
+            setModalError('');
             try {
               await createReq.mutateAsync({
                 type: 'issue_debit_card',
                 payload: { account_id: accountId },
               });
-              setModal(null);
+              closeModal();
             } catch (err) {
-              alert(apiError(err));
+              setModalError(apiError(err));
             }
           }}
-          onClose={() => setModal(null)}
+          onClose={closeModal}
         />
       )}
 
@@ -325,18 +328,20 @@ export default function CardsPage() {
           reqType={modal.reqType}
           cardId={modal.cardId}
           submitting={createReq.isPending}
+          error={modalError}
           onSubmit={async (newLimit) => {
+            setModalError('');
             try {
               await createReq.mutateAsync({
                 type: modal.reqType,
                 payload: { card_id: modal.cardId, new_limit: newLimit },
               });
-              setModal(null);
+              closeModal();
             } catch (err) {
-              alert(apiError(err));
+              setModalError(apiError(err));
             }
           }}
-          onClose={() => setModal(null)}
+          onClose={closeModal}
         />
       )}
 
@@ -346,7 +351,9 @@ export default function CardsPage() {
           accounts={modal.accounts}
           debitCards={modal.debitCards}
           submitting={topupMutation.isPending}
+          error={modalError}
           onSubmit={async (fromType, fromId, amount) => {
+            setModalError('');
             try {
               await topupMutation.mutateAsync({
                 from_type: fromType,
@@ -354,12 +361,12 @@ export default function CardsPage() {
                 to_card_id: modal.creditCardId,
                 amount,
               });
-              setModal(null);
+              closeModal();
             } catch (err) {
-              alert(apiError(err));
+              setModalError(apiError(err));
             }
           }}
-          onClose={() => setModal(null)}
+          onClose={closeModal}
         />
       )}
     </AppShell>
@@ -611,11 +618,13 @@ function CreditCardTile({
 function IssueDebitModal({
   accounts,
   submitting,
+  error,
   onSubmit,
   onClose,
 }: {
   accounts: BankAccount[];
   submitting: boolean;
+  error: string;
   onSubmit: (accountId: string) => void;
   onClose: () => void;
 }) {
@@ -641,6 +650,7 @@ function IssueDebitModal({
           </select>
         </div>
       )}
+      {error && <p data-testid="msg-error" className="text-sm text-status-errorText">{error}</p>}
       <ModalFooter
         onClose={onClose}
         onSubmit={() => onSubmit(selected)}
@@ -655,17 +665,25 @@ function IssueDebitModal({
 function LimitModal({
   reqType,
   submitting,
+  error,
   onSubmit,
   onClose,
 }: {
   reqType: 'increase_credit_limit' | 'decrease_credit_limit';
   cardId: string;
   submitting: boolean;
+  error: string;
   onSubmit: (newLimit: number) => void;
   onClose: () => void;
 }) {
   const [value, setValue] = useState('');
+  const [touched, setTouched] = useState(false);
   const label = reqType === 'increase_credit_limit' ? 'Increase' : 'Decrease';
+  const parsed = parseFloat(value);
+  const fieldError =
+    touched && (!value || isNaN(parsed) || parsed <= 0)
+      ? 'New credit limit must be a positive number'
+      : undefined;
 
   return (
     <Modal title={`Request Credit Limit ${label}`} onClose={onClose}>
@@ -677,10 +695,13 @@ function LimitModal({
           step="100"
           value={value}
           onChange={(e) => setValue(e.target.value)}
+          onBlur={() => setTouched(true)}
           placeholder="e.g. 3000"
           className="w-full border border-border-input rounded-lg px-3 py-2 text-sm font-ui text-[#0F172A] focus:outline-none focus:border-brand-primary"
         />
+        {fieldError && <p className="text-xs text-status-dangerText">{fieldError}</p>}
       </div>
+      {error && <p data-testid="msg-error" className="text-sm text-status-errorText">{error}</p>}
       <ModalFooter
         onClose={onClose}
         onSubmit={() => onSubmit(parseFloat(value))}
@@ -696,6 +717,7 @@ function TopUpModal({
   accounts,
   debitCards,
   submitting,
+  error,
   onSubmit,
   onClose,
 }: {
@@ -703,12 +725,19 @@ function TopUpModal({
   accounts: BankAccount[];
   debitCards: DebitCardExt[];
   submitting: boolean;
+  error: string;
   onSubmit: (fromType: 'account' | 'debit_card', fromId: string, amount: number) => void;
   onClose: () => void;
 }) {
   const [fromType, setFromType] = useState<'account' | 'debit_card'>('account');
   const [fromId, setFromId] = useState('');
   const [amount, setAmount] = useState('');
+  const [amountTouched, setAmountTouched] = useState(false);
+  const parsedAmount = parseFloat(amount);
+  const amountError =
+    amountTouched && (!amount || isNaN(parsedAmount) || parsedAmount <= 0)
+      ? 'Amount must be greater than €0.00'
+      : undefined;
 
   const activeAccounts = accounts.filter((a) => a.status === 'active');
   const activeDebitCards = debitCards.filter(
@@ -779,12 +808,15 @@ function TopUpModal({
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onBlur={() => setAmountTouched(true)}
             placeholder="0.00"
             className="w-full border border-border-input rounded-lg px-3 py-2 text-sm font-ui text-[#0F172A] focus:outline-none focus:border-brand-primary"
           />
+          {amountError && <p className="text-xs text-status-dangerText">{amountError}</p>}
         </div>
       </div>
 
+      {error && <p data-testid="msg-error" className="text-sm text-status-errorText">{error}</p>}
       <ModalFooter
         onClose={onClose}
         onSubmit={() => onSubmit(fromType, selectedId, parseFloat(amount))}

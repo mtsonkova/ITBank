@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { AddClientBodySchema } from '@banking-simulator/shared-types';
 import { AppShell } from '../../components/layout/AppShell';
 import api from '../../lib/axios';
+import { apiError, apiFieldErrors } from '../../lib/apiError';
+import { zodFieldErrors } from '../../lib/validation';
 import { formatCurrency } from '../../lib/formatters';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,11 +25,6 @@ const STATUS_CLASSES: Record<string, string> = {
   inactive: 'bg-border-light text-[#5B6B7A]',
   new: 'bg-status-warningBg text-status-warningText',
 };
-
-function apiError(err: unknown): string {
-  if (axios.isAxiosError(err)) return err.response?.data?.error ?? 'Something went wrong';
-  return 'Something went wrong';
-}
 
 function getInitials(fullName: string): string {
   return fullName
@@ -60,7 +57,7 @@ export default function ClientsPage() {
           <h1 className="font-display text-xl font-semibold text-[#0F172A]">My Clients</h1>
           <button
             type="button"
-            data-testid="btn-add-client"
+            data-testid="add-customer"
             onClick={() => setShowModal(true)}
             className="px-4 py-2 rounded-lg bg-brand-primary text-white text-sm font-ui font-semibold hover:bg-brand-deep transition-colors"
           >
@@ -151,6 +148,7 @@ function AddClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const createClient = useMutation({
     mutationFn: () =>
@@ -164,11 +162,18 @@ function AddClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
     onError: (err) => {
       setStatus('error');
       setMessage(apiError(err));
+      setFieldErrors(apiFieldErrors(err));
     },
   });
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const result = AddClientBodySchema.safeParse({ fullName, username, password });
+    if (!result.success) {
+      setFieldErrors(zodFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
     setStatus('loading');
     setMessage('');
     createClient.mutate();
@@ -196,10 +201,10 @@ function AddClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              required
               data-testid="input-full-name"
               className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
             />
+            {fieldErrors.fullName && <p className="text-xs text-status-dangerText">{fieldErrors.fullName}</p>}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -208,10 +213,10 @@ function AddClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              required
               data-testid="input-username"
               className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
             />
+            {fieldErrors.username && <p className="text-xs text-status-dangerText">{fieldErrors.username}</p>}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -220,10 +225,10 @@ function AddClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
               data-testid="input-password"
               className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
             />
+            {fieldErrors.password && <p className="text-xs text-status-dangerText">{fieldErrors.password}</p>}
           </div>
 
           {status === 'success' && (

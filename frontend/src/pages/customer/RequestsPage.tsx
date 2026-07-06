@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '../../components/layout/AppShell';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
 import { formatDate } from '../../lib/formatters';
 import type { Request } from '@banking-simulator/shared-types';
 
@@ -30,18 +32,10 @@ const STATUS_CLASSES: Record<string, string> = {
   cancelled: 'bg-gray-100 text-gray-500',
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function apiError(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const r = (err as { response: { data: { error?: string } } }).response;
-    return r.data?.error ?? 'An error occurred';
-  }
-  return 'An error occurred';
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function RequestsPage() {
   const qc = useQueryClient();
+  const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
 
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['requests'],
@@ -52,8 +46,11 @@ export default function RequestsPage() {
   const cancelMutation = useMutation({
     mutationFn: (id: string) =>
       api.delete(`/api/v1/requests/${id}`).then((r) => r.data),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['requests'] }),
-    onError: (err) => alert(apiError(err)),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['requests'] });
+      setMsg({ text: 'Request cancelled', error: false });
+    },
+    onError: (err) => setMsg({ text: apiError(err), error: true }),
   });
 
   return (
@@ -63,6 +60,19 @@ export default function RequestsPage() {
         <p className="text-sm font-ui text-gray-500 mb-6">
           Track the status of all your submitted requests.
         </p>
+
+        {msg && (
+          <p
+            data-testid={msg.error ? 'msg-error' : 'msg-success'}
+            className={`text-sm rounded px-3 py-2 mb-4 ${
+              msg.error
+                ? 'text-status-errorText bg-status-errorBg'
+                : 'text-status-successText bg-status-successBg'
+            }`}
+          >
+            {msg.text}
+          </p>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {isLoading ? (
