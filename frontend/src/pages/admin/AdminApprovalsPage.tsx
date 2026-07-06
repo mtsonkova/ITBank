@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { AppShell } from '../../components/layout/AppShell';
 import { RequestActions } from '../../components/manager/RequestActions';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
 import { formatDate } from '../../lib/formatters';
 import { REQ_TYPE_LABELS, REQ_STATUS_CLASSES, payloadSummary } from '../../lib/requestLabels';
 
@@ -23,11 +23,6 @@ interface AdminRequest {
 
 type Tab = 'pending' | 'completed';
 
-function apiError(err: unknown): string {
-  if (axios.isAxiosError(err)) return err.response?.data?.error ?? 'Something went wrong';
-  return 'Something went wrong';
-}
-
 // ─── Fetchers ─────────────────────────────────────────────────────────────────
 const fetchRequests = () =>
   api.get<{ data: AdminRequest[] }>('/api/v1/admin/requests').then((r) => r.data.data);
@@ -36,6 +31,7 @@ const fetchRequests = () =>
 export default function AdminApprovalsPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('pending');
+  const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
 
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['adminRequests', 'all'],
@@ -48,15 +44,19 @@ export default function AdminApprovalsPage() {
       qc.invalidateQueries({ queryKey: ['adminRequests'] });
       qc.invalidateQueries({ queryKey: ['adminManagers'] });
       qc.invalidateQueries({ queryKey: ['adminCustomers'] });
+      setMsg({ text: 'Request approved', error: false });
     },
-    onError: (err) => alert(apiError(err)),
+    onError: (err) => setMsg({ text: apiError(err), error: true }),
   });
 
   const rejectMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       api.post(`/api/v1/admin/requests/${id}/reject`, { reason }).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['adminRequests'] }),
-    onError: (err) => alert(apiError(err)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['adminRequests'] });
+      setMsg({ text: 'Request rejected', error: false });
+    },
+    onError: (err) => setMsg({ text: apiError(err), error: true }),
   });
 
   const pending = requests.filter((r) => r.status === 'pending');
@@ -72,6 +72,19 @@ export default function AdminApprovalsPage() {
             All pending requests across every Account Manager.
           </p>
         </div>
+
+        {msg && (
+          <p
+            data-testid={msg.error ? 'msg-error' : 'msg-success'}
+            className={`text-sm rounded px-3 py-2 ${
+              msg.error
+                ? 'text-status-errorText bg-status-errorBg'
+                : 'text-status-successText bg-status-successBg'
+            }`}
+          >
+            {msg.text}
+          </p>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border">
@@ -117,7 +130,7 @@ export default function AdminApprovalsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {rows.map((r) => (
-                    <tr key={r.id} data-testid={`request-row-${r.id}`} className="hover:bg-gray-50 transition-colors">
+                    <tr key={r.id} data-testid={`approval-row-${r.id}`} className="hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-4">
                         <p className="font-semibold text-[#0F172A]">{r.customer?.fullName ?? r.customerId}</p>
                         <p data-testid={`request-manager-${r.id}`} className="text-xs text-[#8595A3] mt-0.5">

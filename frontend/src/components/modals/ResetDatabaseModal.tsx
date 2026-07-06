@@ -1,18 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
 
 interface Props {
   onClose: () => void;
 }
 
 type Step = 'confirm' | 'cancelled' | 'success' | 'error';
-
-function apiError(err: unknown): string {
-  if (axios.isAxiosError(err)) return err.response?.data?.error ?? 'Something went wrong';
-  return 'Something went wrong';
-}
 
 export function ResetDatabaseModal({ onClose }: Props) {
   const qc = useQueryClient();

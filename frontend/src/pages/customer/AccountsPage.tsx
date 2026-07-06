@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { AppShell } from '../../components/layout/AppShell';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
 import { formatCurrency, formatIBAN, formatDate } from '../../lib/formatters';
 import type { BankAccount, Request } from '@banking-simulator/shared-types';
 
@@ -36,12 +36,6 @@ const REQ_STATUS_CLASSES: Record<string, string> = {
   rejected: 'bg-status-dangerBg text-status-dangerText',
   cancelled: 'bg-border-light text-[#5B6B7A]',
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function apiError(err: unknown): string {
-  if (axios.isAxiosError(err)) return err.response?.data?.error ?? 'Something went wrong';
-  return 'Something went wrong';
-}
 
 // ─── Fetchers ─────────────────────────────────────────────────────────────────
 const fetchAccounts = () =>

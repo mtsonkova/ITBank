@@ -87,13 +87,14 @@ describe('POST /api/v1/auth/login', () => {
     expect(res.body.code).toBe('INVALID_CREDENTIALS');
   });
 
-  it('returns 400 with MISSING_FIELDS when password is absent', async () => {
+  it('returns 400 with VALIDATION_ERROR when password is absent', async () => {
     const res = await request(app)
       .post('/api/v1/auth/login')
       .send({ username: 'anna.becker' });
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('MISSING_FIELDS');
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+    expect(res.body.fields.password).toBeTruthy();
   });
 });
 
@@ -190,13 +191,14 @@ describe('PUT /api/v1/auth/password', () => {
     expect(res.body.code).toBe('WRONG_PASSWORD');
   });
 
-  it('returns 400 with MISSING_FIELDS when newPassword is absent', async () => {
+  it('returns 400 with VALIDATION_ERROR when newPassword is absent', async () => {
     const res = await request(app)
       .put('/api/v1/auth/password')
       .set('Authorization', `Bearer ${makeToken()}`)
       .send({ currentPassword: 'Password123!' });
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('MISSING_FIELDS');
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+    expect(res.body.fields.newPassword).toBeTruthy();
   });
 });

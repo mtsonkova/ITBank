@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '../../components/layout/AppShell';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
 import { formatCurrency, formatIBAN, maskIBAN } from '../../lib/formatters';
 import type { BankAccount, DebitCard, CreditCard } from '@banking-simulator/shared-types';
 
@@ -22,15 +23,6 @@ interface InsufficientFundsState {
   available_balance: string;
   required_amount: string;
   top_up_sources: TopUpSource[];
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function apiError(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const r = (err as { response: { data: { error?: string } } }).response;
-    return r.data?.error ?? 'An error occurred';
-  }
-  return 'An error occurred';
 }
 
 // ─── Insufficient Funds Panel ─────────────────────────────────────────────────
@@ -171,6 +163,7 @@ export default function SpendPage() {
   const [description, setDescription] = useState('');
   const [insufficientFunds, setInsufficientFunds] = useState<InsufficientFundsState | null>(null);
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ instrument?: string; amount?: string }>({});
 
   // ── Queries ──────────────────────────────────────────────────────────────
   const { data: accounts = [] } = useQuery({
@@ -300,10 +293,11 @@ export default function SpendPage() {
     setMsg(null);
     setInsufficientFunds(null);
     const parsed = parseFloat(amount);
-    if (!instrumentVal || !amount || isNaN(parsed) || parsed <= 0) {
-      setMsg({ text: 'Please select a source and enter a valid amount', error: true });
-      return;
-    }
+    const errors: { instrument?: string; amount?: string } = {};
+    if (!instrumentVal) errors.instrument = 'Please select a source';
+    if (!amount || isNaN(parsed) || parsed <= 0) errors.amount = 'Amount must be greater than €0.00';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     const [srcType, srcId] = instrumentVal.split(':');
     spendMutation.mutate({
       source_type: srcType,
@@ -366,10 +360,10 @@ export default function SpendPage() {
                   setInstrumentVal(e.target.value);
                   setInsufficientFunds(null);
                   setMsg(null);
+                  setFieldErrors((f) => ({ ...f, instrument: undefined }));
                 }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 data-testid="transfer-from"
-                required
               >
                 <option value="">— select instrument —</option>
                 {instrumentOptions.map((o) => (
@@ -379,6 +373,9 @@ export default function SpendPage() {
                   </option>
                 ))}
               </select>
+              {fieldErrors.instrument && (
+                <p className="text-xs text-status-dangerText mt-1">{fieldErrors.instrument}</p>
+              )}
               {selectedOpt && !isCreditCard && (
                 <p className="text-xs font-ui text-gray-500 mt-1">
                   Available: {formatCurrency(selectedOpt.balance)}
@@ -401,11 +398,17 @@ export default function SpendPage() {
                 step="0.01"
                 min="0.01"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  setFieldErrors((f) => ({ ...f, amount: undefined }));
+                }}
                 placeholder="0.00"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 data-testid="transfer-amount"
               />
+              {fieldErrors.amount && (
+                <p className="text-xs text-status-dangerText mt-1">{fieldErrors.amount}</p>
+              )}
             </div>
 
             {/* Description */}

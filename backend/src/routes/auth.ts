@@ -2,7 +2,9 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
+import { LoginBodySchema, ChangePasswordBodySchema } from '@banking-simulator/shared-types';
 import { authenticate } from '../middleware/authenticate';
+import { validateBody } from '../middleware/validateBody';
 import { jwtBlacklist } from '../lib/jwtBlacklist';
 import { AppError } from '../lib/AppError';
 import prisma from '../lib/prisma';
@@ -40,13 +42,9 @@ const router = Router();
  *       401:
  *         description: Invalid credentials
  */
-router.post('/login', async (req, res, next) => {
+router.post('/login', validateBody(LoginBodySchema), async (req, res, next) => {
   try {
-    const { username, password } = req.body as { username?: string; password?: string };
-
-    if (!username || !password) {
-      throw new AppError(400, 'username and password are required', 'MISSING_FIELDS');
-    }
+    const { username, password } = req.body as { username: string; password: string };
 
     const user = await prisma.user.findUnique({ where: { username } });
     if (!user) {
@@ -122,16 +120,12 @@ router.post('/logout', authenticate, (req, res) => {
  *       401:
  *         description: Unauthorized
  */
-router.put('/password', authenticate, async (req, res, next) => {
+router.put('/password', authenticate, validateBody(ChangePasswordBodySchema), async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body as {
-      currentPassword?: string;
-      newPassword?: string;
+      currentPassword: string;
+      newPassword: string;
     };
-
-    if (!currentPassword || !newPassword) {
-      throw new AppError(400, 'currentPassword and newPassword are required', 'MISSING_FIELDS');
-    }
 
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.id } });
 

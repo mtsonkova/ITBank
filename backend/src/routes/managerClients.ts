@@ -1,8 +1,16 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
+import {
+  AddClientBodySchema,
+  OpenClientAccountBodySchema,
+  SetInstrumentStatusBodySchema,
+  IssueDebitCardBodySchema,
+  IssueCreditCardBodySchema,
+} from '@banking-simulator/shared-types';
 import { authenticate } from '../middleware/authenticate';
 import { authorize } from '../middleware/authorize';
+import { validateBody } from '../middleware/validateBody';
 import { AppError } from '../lib/AppError';
 import prisma from '../lib/prisma';
 import {
@@ -127,18 +135,14 @@ router.get('/', authenticate, authorize('account_manager'), async (req, res, nex
 });
 
 // ─── POST /api/v1/manager/clients ─────────────────────────────────────────────
-router.post('/', authenticate, authorize('account_manager'), async (req, res, next) => {
+router.post('/', authenticate, authorize('account_manager'), validateBody(AddClientBodySchema), async (req, res, next) => {
   try {
     const managerId = req.user!.id;
     const { fullName, username, password } = req.body as {
-      fullName?: string;
-      username?: string;
-      password?: string;
+      fullName: string;
+      username: string;
+      password: string;
     };
-
-    if (!fullName || !username || !password) {
-      throw new AppError(400, 'fullName, username and password are required', 'MISSING_FIELDS');
-    }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
@@ -217,18 +221,15 @@ router.post(
   '/:customerId/accounts',
   authenticate,
   authorize('account_manager'),
+  validateBody(OpenClientAccountBodySchema),
   async (req, res, next) => {
     try {
       const managerId = req.user!.id;
       const { customerId } = req.params;
-      const { type } = req.body as { type?: string };
-
-      if (!['savings', 'current'].includes(type as string)) {
-        throw new AppError(400, 'type must be savings or current', 'MISSING_FIELDS');
-      }
+      const { type } = req.body as { type: 'savings' | 'current' };
 
       await requireClientInPortfolio(managerId, customerId);
-      const account = await openAccount(customerId, type as 'savings' | 'current');
+      const account = await openAccount(customerId, type);
       res.status(201).json({ data: serializeAccount(account) });
     } catch (err) {
       next(err);
@@ -241,18 +242,15 @@ router.patch(
   '/:customerId/accounts/:accountId',
   authenticate,
   authorize('account_manager'),
+  validateBody(SetInstrumentStatusBodySchema),
   async (req, res, next) => {
     try {
       const managerId = req.user!.id;
       const { customerId, accountId } = req.params;
-      const { status } = req.body as { status?: string };
-
-      if (!['active', 'frozen', 'closed'].includes(status as string)) {
-        throw new AppError(400, 'status must be active, frozen or closed', 'MISSING_FIELDS');
-      }
+      const { status } = req.body as { status: 'active' | 'frozen' | 'closed' };
 
       await requireClientInPortfolio(managerId, customerId);
-      const account = await setAccountStatus(customerId, accountId, status as 'active' | 'frozen' | 'closed');
+      const account = await setAccountStatus(customerId, accountId, status);
       res.json({ data: serializeAccount(account) });
     } catch (err) {
       next(err);
@@ -265,13 +263,12 @@ router.post(
   '/:customerId/debit-cards',
   authenticate,
   authorize('account_manager'),
+  validateBody(IssueDebitCardBodySchema),
   async (req, res, next) => {
     try {
       const managerId = req.user!.id;
       const { customerId } = req.params;
-      const { account_id } = req.body as { account_id?: string };
-
-      if (!account_id) throw new AppError(400, 'account_id is required', 'MISSING_FIELDS');
+      const { account_id } = req.body as { account_id: string };
 
       await requireClientInPortfolio(managerId, customerId);
       const card = await issueDebitCard(customerId, account_id);
@@ -287,18 +284,15 @@ router.patch(
   '/:customerId/debit-cards/:cardId',
   authenticate,
   authorize('account_manager'),
+  validateBody(SetInstrumentStatusBodySchema),
   async (req, res, next) => {
     try {
       const managerId = req.user!.id;
       const { customerId, cardId } = req.params;
-      const { status } = req.body as { status?: string };
-
-      if (!['active', 'frozen', 'closed'].includes(status as string)) {
-        throw new AppError(400, 'status must be active, frozen or closed', 'MISSING_FIELDS');
-      }
+      const { status } = req.body as { status: 'active' | 'frozen' | 'closed' };
 
       await requireClientInPortfolio(managerId, customerId);
-      const card = await setDebitCardStatus(customerId, cardId, status as 'active' | 'frozen' | 'closed');
+      const card = await setDebitCardStatus(customerId, cardId, status);
       res.json({ data: serializeDebitCard(card) });
     } catch (err) {
       next(err);
@@ -311,15 +305,12 @@ router.post(
   '/:customerId/credit-cards',
   authenticate,
   authorize('account_manager'),
+  validateBody(IssueCreditCardBodySchema),
   async (req, res, next) => {
     try {
       const managerId = req.user!.id;
       const { customerId } = req.params;
-      const { credit_limit } = req.body as { credit_limit?: number };
-
-      if (!credit_limit || credit_limit <= 0) {
-        throw new AppError(400, 'credit_limit must be a positive number', 'MISSING_FIELDS');
-      }
+      const { credit_limit } = req.body as { credit_limit: number };
 
       await requireClientInPortfolio(managerId, customerId);
       const card = await issueCreditCard(customerId, credit_limit);
@@ -335,18 +326,15 @@ router.patch(
   '/:customerId/credit-cards/:cardId',
   authenticate,
   authorize('account_manager'),
+  validateBody(SetInstrumentStatusBodySchema),
   async (req, res, next) => {
     try {
       const managerId = req.user!.id;
       const { customerId, cardId } = req.params;
-      const { status } = req.body as { status?: string };
-
-      if (!['active', 'frozen', 'closed'].includes(status as string)) {
-        throw new AppError(400, 'status must be active, frozen or closed', 'MISSING_FIELDS');
-      }
+      const { status } = req.body as { status: 'active' | 'frozen' | 'closed' };
 
       await requireClientInPortfolio(managerId, customerId);
-      const card = await setCreditCardStatus(customerId, cardId, status as 'active' | 'frozen' | 'closed');
+      const card = await setCreditCardStatus(customerId, cardId, status);
       res.json({ data: serializeCreditCard(card) });
     } catch (err) {
       next(err);

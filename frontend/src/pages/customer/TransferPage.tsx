@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '../../components/layout/AppShell';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
 import { formatCurrency, formatIBAN, maskIBAN } from '../../lib/formatters';
 import type { BankAccount, DebitCard, CreditCard } from '@banking-simulator/shared-types';
 
@@ -35,14 +36,6 @@ interface InstrumentOption {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function apiError(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const r = (err as { response: { data: { error?: string } } }).response;
-    return r.data?.error ?? 'An error occurred';
-  }
-  return 'An error occurred';
-}
-
 const STATUS_PILL: Record<string, string> = {
   active: 'bg-status-successBg text-status-successText',
   frozen: 'bg-status-warningBg text-status-warningText',
@@ -97,6 +90,7 @@ function DepositTab({ accounts }: { accounts: BankAccount[] }) {
   const [accountId, setAccountId] = useState('');
   const [amount, setAmount] = useState('');
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ account?: string; amount?: string }>({});
 
   const mutation = useMutation({
     mutationFn: (body: { account_id: string; amount: number }) =>
@@ -116,10 +110,11 @@ function DepositTab({ accounts }: { accounts: BankAccount[] }) {
     e.preventDefault();
     setMsg(null);
     const parsed = parseFloat(amount);
-    if (!accountId || !amount || isNaN(parsed) || parsed <= 0) {
-      setMsg({ text: 'Please select an account and enter a valid amount', error: true });
-      return;
-    }
+    const errors: { account?: string; amount?: string } = {};
+    if (!accountId) errors.account = 'Please select an account';
+    if (!amount || isNaN(parsed) || parsed <= 0) errors.amount = 'Amount must be greater than €0.00';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     mutation.mutate({ account_id: accountId, amount: parsed });
   }
 
@@ -129,10 +124,9 @@ function DepositTab({ accounts }: { accounts: BankAccount[] }) {
         <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">Account</label>
         <select
           value={accountId}
-          onChange={(e) => setAccountId(e.target.value)}
+          onChange={(e) => { setAccountId(e.target.value); setFieldErrors((f) => ({ ...f, account: undefined })); }}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
           data-testid="deposit-account"
-          required
         >
           <option value="">— select account —</option>
           {activeAccounts.map((a) => (
@@ -141,6 +135,7 @@ function DepositTab({ accounts }: { accounts: BankAccount[] }) {
             </option>
           ))}
         </select>
+        {fieldErrors.account && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.account}</p>}
       </div>
       <div>
         <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">Amount (€)</label>
@@ -149,11 +144,12 @@ function DepositTab({ accounts }: { accounts: BankAccount[] }) {
           step="0.01"
           min="0.01"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => { setAmount(e.target.value); setFieldErrors((f) => ({ ...f, amount: undefined })); }}
           placeholder="0.00"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
           data-testid="deposit-amount"
         />
+        {fieldErrors.amount && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.amount}</p>}
       </div>
       <button
         type="submit"
@@ -310,12 +306,14 @@ function TransferTab({
   const [note, setNote] = useState('');
   const [insufficientFunds, setInsufficientFunds] = useState<InsufficientFundsState | null>(null);
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ from?: string; to?: string; amount?: string }>({});
 
   // cross-customer state
   const [crossFromId, setCrossFromId] = useState('');
   const [toIban, setToIban] = useState('');
   const [crossAmount, setCrossAmount] = useState('');
   const [crossMsg, setCrossMsg] = useState<{ text: string; error: boolean } | null>(null);
+  const [crossFieldErrors, setCrossFieldErrors] = useState<{ from?: string; to?: string; amount?: string }>({});
 
   // ── Build instrument options ──────────────────────────────────────────────
   const instrumentOptions: InstrumentOption[] = [
@@ -428,10 +426,12 @@ function TransferTab({
     setMsg(null);
     setInsufficientFunds(null);
     const parsed = parseFloat(amount);
-    if (!fromVal || !toVal || !amount || isNaN(parsed) || parsed <= 0) {
-      setMsg({ text: 'Please fill in all fields', error: true });
-      return;
-    }
+    const errors: { from?: string; to?: string; amount?: string } = {};
+    if (!fromVal) errors.from = 'Please select a source';
+    if (!toVal) errors.to = 'Please select a destination';
+    if (!amount || isNaN(parsed) || parsed <= 0) errors.amount = 'Amount must be greater than €0.00';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     const [fromType, fromId] = fromVal.split(':');
     const [toType, toId] = toVal.split(':');
     transferMutation.mutate({ from_type: fromType, from_id: fromId, to_type: toType, to_id: toId, amount: parsed, note: note || undefined });
@@ -468,10 +468,12 @@ function TransferTab({
     e.preventDefault();
     setCrossMsg(null);
     const parsed = parseFloat(crossAmount);
-    if (!crossFromId || !toIban || isNaN(parsed) || parsed <= 0) {
-      setCrossMsg({ text: 'Please fill in all fields', error: true });
-      return;
-    }
+    const errors: { from?: string; to?: string; amount?: string } = {};
+    if (!crossFromId) errors.from = 'Please select a source account';
+    if (!toIban.trim()) errors.to = 'Destination IBAN is required';
+    if (!crossAmount || isNaN(parsed) || parsed <= 0) errors.amount = 'Amount must be greater than €0.00';
+    setCrossFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     externalMutation.mutate({ from_account_id: crossFromId, to_iban: toIban, amount: parsed });
   }
 
@@ -502,10 +504,9 @@ function TransferTab({
             <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">From</label>
             <select
               value={fromVal}
-              onChange={(e) => { setFromVal(e.target.value); setToVal(''); setInsufficientFunds(null); }}
+              onChange={(e) => { setFromVal(e.target.value); setToVal(''); setInsufficientFunds(null); setFieldErrors((f) => ({ ...f, from: undefined })); }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
               data-testid="transfer-from"
-              required
             >
               <option value="">— select source —</option>
               {instrumentOptions.map((o) => (
@@ -514,15 +515,15 @@ function TransferTab({
                 </option>
               ))}
             </select>
+            {fieldErrors.from && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.from}</p>}
           </div>
           <div>
             <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">To</label>
             <select
               value={toVal}
-              onChange={(e) => setToVal(e.target.value)}
+              onChange={(e) => { setToVal(e.target.value); setFieldErrors((f) => ({ ...f, to: undefined })); }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
               data-testid="transfer-to"
-              required
             >
               <option value="">— select destination —</option>
               {toOptions.map((o) => (
@@ -531,6 +532,7 @@ function TransferTab({
                 </option>
               ))}
             </select>
+            {fieldErrors.to && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.to}</p>}
           </div>
           <div>
             <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">Amount (€)</label>
@@ -539,11 +541,12 @@ function TransferTab({
               step="0.01"
               min="0.01"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => { setAmount(e.target.value); setFieldErrors((f) => ({ ...f, amount: undefined })); }}
               placeholder="0.00"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
               data-testid="transfer-amount"
             />
+            {fieldErrors.amount && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.amount}</p>}
           </div>
           <div>
             <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">
@@ -595,10 +598,9 @@ function TransferTab({
             <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">From Account</label>
             <select
               value={crossFromId}
-              onChange={(e) => setCrossFromId(e.target.value)}
+              onChange={(e) => { setCrossFromId(e.target.value); setCrossFieldErrors((f) => ({ ...f, from: undefined })); }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
               data-testid="transfer-from"
-              required
             >
               <option value="">— select account —</option>
               {activeAccounts.map((a) => (
@@ -607,18 +609,20 @@ function TransferTab({
                 </option>
               ))}
             </select>
+            {crossFieldErrors.from && <p className="text-xs text-status-dangerText mt-1">{crossFieldErrors.from}</p>}
           </div>
           <div>
             <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">Destination IBAN</label>
             <input
               type="text"
               value={toIban}
-              onChange={(e) => setToIban(e.target.value)}
+              onChange={(e) => { setToIban(e.target.value); setCrossFieldErrors((f) => ({ ...f, to: undefined })); }}
               placeholder="IB12 XXXX XXXX XXXX XXXX"
               maxLength={25}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary tracking-wider"
               data-testid="transfer-to"
             />
+            {crossFieldErrors.to && <p className="text-xs text-status-dangerText mt-1">{crossFieldErrors.to}</p>}
           </div>
           <div>
             <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">Amount (€)</label>
@@ -627,11 +631,12 @@ function TransferTab({
               step="0.01"
               min="0.01"
               value={crossAmount}
-              onChange={(e) => setCrossAmount(e.target.value)}
+              onChange={(e) => { setCrossAmount(e.target.value); setCrossFieldErrors((f) => ({ ...f, amount: undefined })); }}
               placeholder="0.00"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
               data-testid="transfer-amount"
             />
+            {crossFieldErrors.amount && <p className="text-xs text-status-dangerText mt-1">{crossFieldErrors.amount}</p>}
           </div>
           <button
             type="submit"
@@ -664,6 +669,7 @@ function TopUpTab({
   const [toCreditCardId, setToCreditCardId] = useState('');
   const [amount, setAmount] = useState('');
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ from?: string; toCard?: string; amount?: string }>({});
 
   const mutation = useMutation({
     mutationFn: (body: { from_type: string; from_id: string; to_card_id: string; amount: number }) =>
@@ -689,10 +695,12 @@ function TopUpTab({
     e.preventDefault();
     setMsg(null);
     const parsed = parseFloat(amount);
-    if (!fromId || !toCreditCardId || !amount || isNaN(parsed) || parsed <= 0) {
-      setMsg({ text: 'Please fill in all fields', error: true });
-      return;
-    }
+    const errors: { from?: string; toCard?: string; amount?: string } = {};
+    if (!fromId) errors.from = fromType === 'account' ? 'Please select an account' : 'Please select a debit card';
+    if (!toCreditCardId) errors.toCard = 'Please select a credit card';
+    if (!amount || isNaN(parsed) || parsed <= 0) errors.amount = 'Amount must be greater than €0.00';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     mutation.mutate({ from_type: fromType, from_id: fromId, to_card_id: toCreditCardId, amount: parsed });
   }
 
@@ -723,10 +731,9 @@ function TopUpTab({
         </label>
         <select
           value={fromId}
-          onChange={(e) => setFromId(e.target.value)}
+          onChange={(e) => { setFromId(e.target.value); setFieldErrors((f) => ({ ...f, from: undefined })); }}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
           data-testid="topup-from"
-          required
         >
           <option value="">— select —</option>
           {fromType === 'account'
@@ -741,15 +748,15 @@ function TopUpTab({
                 </option>
               ))}
         </select>
+        {fieldErrors.from && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.from}</p>}
       </div>
       <div>
         <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">Credit Card</label>
         <select
           value={toCreditCardId}
-          onChange={(e) => setToCreditCardId(e.target.value)}
+          onChange={(e) => { setToCreditCardId(e.target.value); setFieldErrors((f) => ({ ...f, toCard: undefined })); }}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
           data-testid="topup-to-card"
-          required
         >
           <option value="">— select credit card —</option>
           {activeCreditCards.map((c) => (
@@ -758,6 +765,7 @@ function TopUpTab({
             </option>
           ))}
         </select>
+        {fieldErrors.toCard && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.toCard}</p>}
       </div>
       <div>
         <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">Amount (€)</label>
@@ -766,11 +774,12 @@ function TopUpTab({
           step="0.01"
           min="0.01"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => { setAmount(e.target.value); setFieldErrors((f) => ({ ...f, amount: undefined })); }}
           placeholder="0.00"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
           data-testid="topup-amount"
         />
+        {fieldErrors.amount && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.amount}</p>}
       </div>
       <button
         type="submit"
@@ -791,6 +800,7 @@ function WithdrawRequestTab({ accounts }: { accounts: BankAccount[] }) {
   const [accountId, setAccountId] = useState('');
   const [amount, setAmount] = useState('');
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ account?: string; amount?: string }>({});
 
   const mutation = useMutation({
     mutationFn: (body: { type: string; payload: { account_id: string; amount: number } }) =>
@@ -810,10 +820,11 @@ function WithdrawRequestTab({ accounts }: { accounts: BankAccount[] }) {
     e.preventDefault();
     setMsg(null);
     const parsed = parseFloat(amount);
-    if (!accountId || !amount || isNaN(parsed) || parsed <= 0) {
-      setMsg({ text: 'Please select an account and enter a valid amount', error: true });
-      return;
-    }
+    const errors: { account?: string; amount?: string } = {};
+    if (!accountId) errors.account = 'Please select an account';
+    if (!amount || isNaN(parsed) || parsed <= 0) errors.amount = 'Amount must be greater than €0.00';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     mutation.mutate({ type: 'withdraw_money', payload: { account_id: accountId, amount: parsed } });
   }
 
@@ -826,10 +837,9 @@ function WithdrawRequestTab({ accounts }: { accounts: BankAccount[] }) {
         <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">Account</label>
         <select
           value={accountId}
-          onChange={(e) => setAccountId(e.target.value)}
+          onChange={(e) => { setAccountId(e.target.value); setFieldErrors((f) => ({ ...f, account: undefined })); }}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
           data-testid="withdraw-account"
-          required
         >
           <option value="">— select account —</option>
           {activeAccounts.map((a) => (
@@ -838,6 +848,7 @@ function WithdrawRequestTab({ accounts }: { accounts: BankAccount[] }) {
             </option>
           ))}
         </select>
+        {fieldErrors.account && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.account}</p>}
       </div>
       <div>
         <label className="block text-sm font-ui font-semibold text-gray-700 mb-1">Amount (€)</label>
@@ -846,11 +857,12 @@ function WithdrawRequestTab({ accounts }: { accounts: BankAccount[] }) {
           step="0.01"
           min="0.01"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => { setAmount(e.target.value); setFieldErrors((f) => ({ ...f, amount: undefined })); }}
           placeholder="0.00"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-brand-primary"
           data-testid="withdraw-amount"
         />
+        {fieldErrors.amount && <p className="text-xs text-status-dangerText mt-1">{fieldErrors.amount}</p>}
       </div>
       <button
         type="submit"

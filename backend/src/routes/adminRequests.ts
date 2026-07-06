@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import { RejectRequestBodySchema } from '@banking-simulator/shared-types';
 import { authenticate } from '../middleware/authenticate';
 import { authorize } from '../middleware/authorize';
+import { validateBody } from '../middleware/validateBody';
 import { AppError } from '../lib/AppError';
 import prisma from '../lib/prisma';
 import type { RequestType } from '@prisma/client';
@@ -85,14 +87,10 @@ router.post('/:id/approve', authenticate, authorize('admin'), async (req, res, n
 });
 
 // ─── POST /api/v1/admin/requests/:id/reject ────────────────────────────────────
-router.post('/:id/reject', authenticate, authorize('admin'), async (req, res, next) => {
+router.post('/:id/reject', authenticate, authorize('admin'), validateBody(RejectRequestBodySchema), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body as { reason?: string };
-
-    if (!reason || !reason.trim()) {
-      throw new AppError(400, 'reason is required', 'MISSING_FIELDS');
-    }
+    const { reason } = req.body as { reason: string };
 
     const request = await prisma.request.findUnique({ where: { id } });
     if (!request) {

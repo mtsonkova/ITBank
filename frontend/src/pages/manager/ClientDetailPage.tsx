@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { AppShell } from '../../components/layout/AppShell';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
 import { formatCurrency, formatIBAN, formatDate } from '../../lib/formatters';
 import { REQ_TYPE_LABELS } from '../../lib/requestLabels';
 import { ClientHistorySection } from '../../components/manager/ClientHistorySection';
@@ -54,11 +55,6 @@ const UNMET_LABELS: Record<string, string> = {
     'Credit card balance must be fully restored (equal to or above the credit limit).',
   account_balance_not_zero: 'All bank account balances must be €0.00.',
 };
-
-function apiError(err: unknown): string {
-  if (axios.isAxiosError(err)) return err.response?.data?.error ?? 'Something went wrong';
-  return 'Something went wrong';
-}
 
 function computeUnmetConditions(detail: ClientDetail): string[] {
   const unmet: string[] = [];
@@ -120,7 +116,7 @@ export default function ClientDetailPage() {
         .patch(`/api/v1/manager/clients/${id}/accounts/${accountId}`, { status })
         .then((r) => r.data),
     onSuccess: invalidate,
-    onError: (err) => alert(apiError(err)),
+    onError: (err) => setActionError(apiError(err)),
   });
 
   const issueDebitMutation = useMutation({
@@ -139,7 +135,7 @@ export default function ClientDetailPage() {
         .patch(`/api/v1/manager/clients/${id}/debit-cards/${cardId}`, { status })
         .then((r) => r.data),
     onSuccess: invalidate,
-    onError: (err) => alert(apiError(err)),
+    onError: (err) => setActionError(apiError(err)),
   });
 
   const issueCreditMutation = useMutation({
@@ -160,7 +156,7 @@ export default function ClientDetailPage() {
         .patch(`/api/v1/manager/clients/${id}/credit-cards/${cardId}`, { status })
         .then((r) => r.data),
     onSuccess: invalidate,
-    onError: (err) => alert(apiError(err)),
+    onError: (err) => setActionError(apiError(err)),
   });
 
   const deleteMutation = useMutation({
@@ -170,7 +166,7 @@ export default function ClientDetailPage() {
       if (axios.isAxiosError(err) && err.response?.data?.code === 'CLIENT_DELETION_BLOCKED') {
         setModal({ kind: 'delete_blocked', unmet: err.response.data.unmet });
       } else {
-        alert(apiError(err));
+        setActionError(apiError(err));
       }
     },
   });
@@ -330,7 +326,7 @@ export default function ClientDetailPage() {
               {client.debitCards.map((card) => (
                 <div
                   key={card.id}
-                  data-testid={`debit-card-row-${card.id}`}
+                  data-testid={`card-tile-${card.id}`}
                   className="border border-border rounded-lg p-4 flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between">
@@ -338,7 +334,7 @@ export default function ClientDetailPage() {
                       Debit Card
                     </span>
                     <span
-                      data-testid={`debit-card-status-${card.id}`}
+                      data-testid={`card-status-${card.id}`}
                       className={`text-[10px] font-ui font-semibold px-2 py-0.5 rounded-full ${ACCOUNT_STATUS_CLASSES[card.status]}`}
                     >
                       {card.status.charAt(0).toUpperCase() + card.status.slice(1)}
@@ -402,7 +398,7 @@ export default function ClientDetailPage() {
               {client.creditCards.map((card) => (
                 <div
                   key={card.id}
-                  data-testid={`credit-card-row-${card.id}`}
+                  data-testid={`card-tile-${card.id}`}
                   className="border border-border rounded-lg p-4 flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between">
@@ -410,7 +406,7 @@ export default function ClientDetailPage() {
                       Credit Card
                     </span>
                     <span
-                      data-testid={`credit-card-status-${card.id}`}
+                      data-testid={`card-status-${card.id}`}
                       className={`text-[10px] font-ui font-semibold px-2 py-0.5 rounded-full ${ACCOUNT_STATUS_CLASSES[card.status]}`}
                     >
                       {card.status.charAt(0).toUpperCase() + card.status.slice(1)}
@@ -670,6 +666,12 @@ function IssueCreditModal({
   onClose: () => void;
 }) {
   const [value, setValue] = useState('1000');
+  const [touched, setTouched] = useState(false);
+  const parsed = parseFloat(value);
+  const fieldError =
+    touched && (!value || isNaN(parsed) || parsed <= 0)
+      ? 'Credit limit must be a positive number'
+      : undefined;
   return (
     <Modal title="Issue Credit Card" onClose={onClose}>
       <div className="space-y-2">
@@ -680,8 +682,10 @@ function IssueCreditModal({
           step="100"
           value={value}
           onChange={(e) => setValue(e.target.value)}
+          onBlur={() => setTouched(true)}
           className="w-full border border-border-input rounded-lg px-3 py-2 text-sm font-ui text-[#0F172A] focus:outline-none focus:border-brand-primary"
         />
+        {fieldError && <p className="text-xs text-status-dangerText">{fieldError}</p>}
       </div>
       <ModalFooter
         onClose={onClose}

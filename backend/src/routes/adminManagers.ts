@@ -1,7 +1,8 @@
 import { Router } from 'express';
+import { AddManagerBodySchema, ReassignBodySchema } from '@banking-simulator/shared-types';
 import { authenticate } from '../middleware/authenticate';
 import { authorize } from '../middleware/authorize';
-import { AppError } from '../lib/AppError';
+import { validateBody } from '../middleware/validateBody';
 import { listManagers, createManager, removeManager, bulkReassignManager } from '../services/adminService';
 
 const router = Router();
@@ -27,17 +28,13 @@ router.get('/', authenticate, authorize('admin'), async (_req, res, next) => {
 });
 
 // ─── POST /api/v1/admin/managers ───────────────────────────────────────────────
-router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
+router.post('/', authenticate, authorize('admin'), validateBody(AddManagerBodySchema), async (req, res, next) => {
   try {
     const { fullName, username, password } = req.body as {
-      fullName?: string;
-      username?: string;
-      password?: string;
+      fullName: string;
+      username: string;
+      password: string;
     };
-
-    if (!fullName || !username || !password) {
-      throw new AppError(400, 'fullName, username and password are required', 'MISSING_FIELDS');
-    }
 
     const manager = await createManager(fullName, username, password);
     res.status(201).json({
@@ -60,12 +57,9 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res, next) =
 });
 
 // ─── POST /api/v1/admin/managers/:id/reassign ──────────────────────────────────
-router.post('/:id/reassign', authenticate, authorize('admin'), async (req, res, next) => {
+router.post('/:id/reassign', authenticate, authorize('admin'), validateBody(ReassignBodySchema), async (req, res, next) => {
   try {
-    const { toManagerId } = req.body as { toManagerId?: string };
-    if (!toManagerId) {
-      throw new AppError(400, 'toManagerId is required', 'MISSING_FIELDS');
-    }
+    const { toManagerId } = req.body as { toManagerId: string };
 
     await bulkReassignManager(req.params.id, toManagerId);
     res.json({ message: 'Clients reassigned successfully' });

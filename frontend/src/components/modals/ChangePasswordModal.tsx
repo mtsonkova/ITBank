@@ -1,6 +1,8 @@
 import { type FormEvent, useState } from 'react';
-import axios from 'axios';
+import { ChangePasswordBodySchema } from '@banking-simulator/shared-types';
 import api from '../../lib/axios';
+import { apiError } from '../../lib/apiError';
+import { zodFieldErrors } from '../../lib/validation';
 
 interface Props {
   onClose: () => void;
@@ -11,26 +13,27 @@ export function ChangePasswordModal({ onClose }: Props) {
   const [newPassword, setNewPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const result = ChangePasswordBodySchema.safeParse({ currentPassword, newPassword });
+    if (!result.success) {
+      setFieldErrors(zodFieldErrors(result.error));
+      return;
+    }
+    setFieldErrors({});
     setStatus('loading');
     setMessage('');
     try {
-      await api.put('/api/v1/auth/password', { currentPassword, newPassword });
+      await api.put('/api/v1/auth/password', result.data);
       setStatus('success');
       setMessage('Password changed successfully');
       setCurrentPassword('');
       setNewPassword('');
     } catch (err) {
       setStatus('error');
-      if (axios.isAxiosError(err)) {
-        setMessage(
-          (err.response?.data as { error?: string })?.error ?? 'Something went wrong',
-        );
-      } else {
-        setMessage('Something went wrong');
-      }
+      setMessage(apiError(err));
     }
   }
 
@@ -60,11 +63,11 @@ export function ChangePasswordModal({ onClose }: Props) {
             <input
               type="password"
               value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
+              onChange={(e) => { setCurrentPassword(e.target.value); setFieldErrors((f) => ({ ...f, currentPassword: '' })); }}
               data-testid="input-current-password"
               className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
             />
+            {fieldErrors.currentPassword && <p className="text-xs text-status-dangerText">{fieldErrors.currentPassword}</p>}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -72,11 +75,11 @@ export function ChangePasswordModal({ onClose }: Props) {
             <input
               type="password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
+              onChange={(e) => { setNewPassword(e.target.value); setFieldErrors((f) => ({ ...f, newPassword: '' })); }}
               data-testid="input-new-password"
               className="border border-border-input rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary/40"
             />
+            {fieldErrors.newPassword && <p className="text-xs text-status-dangerText">{fieldErrors.newPassword}</p>}
           </div>
 
           {status === 'success' && (
