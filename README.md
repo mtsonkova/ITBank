@@ -11,6 +11,31 @@ A web-based banking simulator for QA training. Supports three roles: **Customer*
 
 ## Local Setup
 
+### Quick start (recommended)
+
+`setup.sh` automates steps 1-5 below and is safe to re-run — it checks each step's
+current state and skips anything already done:
+
+```bash
+./setup.sh
+```
+
+It will, in order:
+
+1. Start the `postgres` Docker container if it isn't already running, and wait
+   until it accepts connections.
+2. Run `npm install` if dependencies aren't already up to date with
+   `package-lock.json`.
+3. Create `backend/.env` and `frontend/.env` from their `.env.example` files if
+   they don't already exist.
+4. Generate the Prisma client, apply pending migrations, and seed the database —
+   each only if not already done (skips seeding if the `users` table already has
+   data).
+5. Start the backend (`http://localhost:3000`) and frontend
+   (`http://localhost:5173`) together. Press `Ctrl+C` to stop both.
+
+### Manual setup
+
 ### 1. Start the database
 
 ```bash
