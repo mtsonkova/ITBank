@@ -46,9 +46,13 @@ export default function LoginPage() {
       navigate(ROLE_HOME[data.user.role], { replace: true });
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        setError(
-          (err.response?.data as { error?: string })?.error ?? 'Login failed. Please try again.',
-        );
+        if (!err.response) {
+          setError('Cannot reach the server. Try again in a moment.');
+        } else {
+          setError(
+            (err.response.data as { error?: string })?.error ?? 'Login failed. Please try again.',
+          );
+        }
       } else {
         setError('Login failed. Please try again.');
       }

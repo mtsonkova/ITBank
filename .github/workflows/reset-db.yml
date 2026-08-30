@@ -1,0 +1,32 @@
+name: Reset demo database
+
+on:
+  schedule:
+    # 03:00 UTC on the 1st, 11th, 21st and 31st of each month (~every 10 days)
+    - cron: '0 3 */10 * *'
+  workflow_dispatch: # lets you also trigger it manually from the Actions tab
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Reset to seed data
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DIRECT_URL }}
+        run: npx tsx prisma/seed.ts
+
+      - name: Verify
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DIRECT_URL }}
+        run: npx prisma db execute --stdin <<< "SELECT COUNT(*) AS users FROM users;"

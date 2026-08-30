@@ -7,7 +7,8 @@ import apiRouter from './routes/index';
 
 const app = express();
 
-app.use(cors({ exposedHeaders: ['Content-Disposition'] }));
+const allowedOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(',');
+app.use(cors({ origin: allowedOrigins, exposedHeaders: ['Content-Disposition'] }));
 app.use(express.json());
 
 const swaggerSpec = swaggerJsdoc({
