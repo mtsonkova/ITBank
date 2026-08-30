@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: itbank-api
+    runtime: node
+    region: frankfurt
+    plan: free
+    branch: main
+    buildCommand: npm install && npm run db:generate --workspace=backend && npm run build
+    startCommand: node backend/dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: http://localhost:5173,https://preeminent-frangipane-6fec55.netlify.app
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
