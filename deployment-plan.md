@@ -216,6 +216,10 @@ You should see `michael.scott` (admin), `sofia.lang` / `david.mertens`
 (account_manager), and four customers — these are the real seeded usernames
 from `seedDatabase.ts`, not the guide's placeholder `mtsonkova`/`jdoe`.
 
+**Status: done.** Neon project `itbank` created (Frankfurt), migrations
+applied, database seeded, verified — all 7 seeded users came back with the
+correct roles.
+
 ## Phase 4 — Render (backend) — monorepo-specific settings
 
 The guide's Part 2.4 assumes either a Dockerfile or a self-contained Node app
@@ -223,7 +227,51 @@ living in its own folder, with **Root Directory: backend**. Neither fits: there'
 no Dockerfile in this repo, and setting Root Directory to `backend` would run
 `npm install` scoped to that subfolder, breaking npm workspace symlink
 resolution for `@banking-simulator/shared-types` (which, per Phase 0, backend
-now needs a real build of). Use the repo root instead:
+now needs a real build of). Use the repo root instead.
+
+### 4.1 `render.yaml` Blueprint — ✅ added, drives most of this automatically
+Rather than clicking through every field by hand, the repo root now has a
+`render.yaml` Blueprint (Render's infra-as-code format). On Render:
+**New → Blueprint → connect this repo → it reads `render.yaml` and pre-fills
+the service.** You'll be prompted to review and paste in one secret
+(`DATABASE_URL`); everything else is already set:
+
+```yaml
+services:
+  - type: web
+    name: itbank-api
+    runtime: node
+    region: frankfurt
+    plan: free
+    branch: main
+    buildCommand: npm install && npm run db:generate --workspace=backend && npm run build
+    startCommand: node backend/dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: http://localhost:5173,https://preeminent-frangipane-6fec55.netlify.app
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+```
+
+Notes on the env vars:
+- `JWT_SECRET` uses `generateValue: true` — Render generates a random secure
+  value itself at first deploy; you never have to run `openssl rand -hex 32`
+  or see/paste this one.
+- `DATABASE_URL` uses `sync: false` — Render will prompt you for this value
+  once during the Blueprint setup and store it, but it's never written into
+  the repo. Paste in the Neon **pooled** connection string here (the one
+  ending `-pooler...` with `?sslmode=require`).
+- `NODE_ENV` and `CORS_ORIGINS` are plain values, safe to commit since
+  they're not secrets.
+- Root Directory is intentionally omitted from the Blueprint (defaults to
+  repo root) for the workspace-resolution reason above.
+
+If you'd rather configure it by hand instead of via Blueprint, the equivalent
+manual settings are:
 
 | Field | Value |
 |---|---|
@@ -243,7 +291,7 @@ triggers this automatically on `npm install`, but listing it explicitly in
 the Build Command makes the dependency visible and keeps the build
 reproducible if that implicit behavior ever changes upstream.)
 
-Environment variables (Render dashboard → Environment):
+Environment variables (Render dashboard → Environment), if configuring by hand:
 
 | Key | Value |
 |---|---|
