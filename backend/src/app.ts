@@ -33,6 +33,10 @@ const swaggerSpec = swaggerJsdoc({
   apis: ['./src/routes/**/*.ts'],
 });
 
+app.get('/', (_req, res) => {
+  res.json({ name: 'IT Bank Banking Simulator API', docs: '/api/v1/docs', health: '/api/v1/health' });
+});
+
 app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/v1', apiRouter);
 
