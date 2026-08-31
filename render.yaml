@@ -6,7 +6,7 @@ services:
     plan: free
     branch: main
     buildCommand: npm install --include=dev && npm run db:generate --workspace=backend && npm run build
-    startCommand: node backend/dist/index.js
+    startCommand: npm run db:migrate --workspace=backend && npm run db:seed:if-empty --workspace=backend && node backend/dist/index.js
     envVars:
       - key: NODE_ENV
         value: production
