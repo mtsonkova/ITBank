@@ -179,7 +179,7 @@ describe('POST /api/v1/manager/requests/:id/approve', () => {
       accountManagerId: MANAGER_ID,
       type: 'open_account',
       status: 'pending',
-      payload: { type: 'savings' },
+      payload: JSON.stringify({ type: 'savings' }),
     });
     (prisma.bankAccount.create as any).mockResolvedValue({ id: 'acct-new' });
     (prisma.request.update as any).mockResolvedValue({
@@ -188,7 +188,7 @@ describe('POST /api/v1/manager/requests/:id/approve', () => {
       accountManagerId: MANAGER_ID,
       type: 'open_account',
       status: 'approved',
-      payload: { type: 'savings' },
+      payload: JSON.stringify({ type: 'savings' }),
       rejectionReason: null,
       createdAt: new Date(),
       actionedAt: new Date(),
@@ -213,7 +213,7 @@ describe('POST /api/v1/manager/requests/:id/approve', () => {
       accountManagerId: MANAGER_ID,
       type: 'withdraw_money',
       status: 'pending',
-      payload: { account_id: 'acct-1', amount: 100 },
+      payload: JSON.stringify({ account_id: 'acct-1', amount: 100 }),
     });
     (prisma.bankAccount.findUnique as any).mockResolvedValue({
       id: 'acct-1',
@@ -227,7 +227,7 @@ describe('POST /api/v1/manager/requests/:id/approve', () => {
       accountManagerId: MANAGER_ID,
       type: 'withdraw_money',
       status: 'approved',
-      payload: { account_id: 'acct-1', amount: 100 },
+      payload: JSON.stringify({ account_id: 'acct-1', amount: 100 }),
       rejectionReason: null,
       createdAt: new Date(),
       actionedAt: new Date(),
@@ -248,7 +248,7 @@ describe('POST /api/v1/manager/requests/:id/approve', () => {
       accountManagerId: MANAGER_ID,
       type: 'close_credit_card',
       status: 'pending',
-      payload: { card_id: 'cc-1' },
+      payload: JSON.stringify({ card_id: 'cc-1' }),
     });
     (prisma.creditCard.findUnique as any).mockResolvedValue({
       id: 'cc-1',
@@ -274,7 +274,7 @@ describe('POST /api/v1/manager/requests/:id/approve', () => {
       accountManagerId: 'other-manager',
       type: 'freeze_account',
       status: 'pending',
-      payload: { account_id: 'acct-1' },
+      payload: JSON.stringify({ account_id: 'acct-1' }),
     });
 
     const res = await request(app)
@@ -291,7 +291,7 @@ describe('POST /api/v1/manager/requests/:id/approve', () => {
       accountManagerId: MANAGER_ID,
       type: 'freeze_account',
       status: 'approved',
-      payload: { account_id: 'acct-1' },
+      payload: JSON.stringify({ account_id: 'acct-1' }),
     });
 
     const res = await request(app)
@@ -321,7 +321,7 @@ describe('POST /api/v1/manager/requests/:id/reject', () => {
       accountManagerId: MANAGER_ID,
       type: 'freeze_account',
       status: 'pending',
-      payload: { account_id: 'acct-1' },
+      payload: JSON.stringify({ account_id: 'acct-1' }),
     });
     (prisma.request.update as any).mockResolvedValue({
       id: 'req-1',
@@ -329,7 +329,7 @@ describe('POST /api/v1/manager/requests/:id/reject', () => {
       accountManagerId: MANAGER_ID,
       type: 'freeze_account',
       status: 'rejected',
-      payload: { account_id: 'acct-1' },
+      payload: JSON.stringify({ account_id: 'acct-1' }),
       rejectionReason: 'Not eligible',
       createdAt: new Date(),
       actionedAt: new Date(),

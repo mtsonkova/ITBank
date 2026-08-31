@@ -52,7 +52,7 @@ const CREATED_REQUEST = {
   accountManagerId: null,
   type: 'open_account',
   status: 'pending',
-  payload: {},
+  payload: JSON.stringify({}),
   rejectionReason: null,
   createdAt: new Date(),
   actionedAt: null,
@@ -94,7 +94,7 @@ describe('POST /api/v1/requests — account requests', () => {
       balance: decimal(0),
     });
     (prisma.request.findMany as any).mockResolvedValue([
-      { payload: { account_id: 'acct-1' } },
+      { payload: JSON.stringify({ account_id: 'acct-1' }) },
     ]);
 
     const res = await request(app)

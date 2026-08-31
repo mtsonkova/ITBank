@@ -8,14 +8,14 @@ TypeScript monorepo — npm workspaces:
 ```
 banking-simulator/
 ├── packages/shared-types/   ← Zod schemas + inferred TS types
-├── backend/                  ← Express REST API (Node 20)
+├── backend/                  ← Express REST API (Node 20) + embedded SQLite database file
 ├── frontend/                 ← React 18 SPA (Vite)
-├── docker-compose.yml        ← PostgreSQL 16
 └── BUILD_PLAN.md             ← source of truth for all decisions
 ```
 
 ## Key decisions (see BUILD_PLAN.md for full detail)
 
+- **Database:** embedded SQLite (file: `backend/prisma/dev.db`) — no Docker/server dependency, Spring PetClinic-style. Prisma's SQLite connector doesn't support native enums or Json columns: role/status/type columns are plain strings validated via the Zod enums in `packages/shared-types`, and `Request.payload` is a JSON string serialized/parsed via `backend/src/lib/jsonPayload.ts`.
 - **Roles:** customer | account_manager | admin — fixed per login, no role switcher
 - **IBAN:** `IB` + 2 random digits + 16 random alphanumeric = 20 chars, displayed as `IB12 XXXX XXXX XXXX XXXX`
 - **Auth:** JWT (8h, payload: `{ sub, role, jti, iat, exp }`), bcrypt cost ≥ 12
@@ -42,9 +42,8 @@ Fonts: Bitter (headings/logo) + Libre Franklin (UI) from Google Fonts.
 ## Running locally
 
 ```bash
-docker compose up -d          # start PostgreSQL
 npm install                   # install all workspaces
-npm run db:migrate            # run Prisma migrations
+npm run db:migrate            # run Prisma migrations (creates backend/prisma/dev.db)
 npm run db:seed               # seed demo data
 npm run dev:backend           # backend on :3000
 npm run dev:frontend          # frontend on :5173

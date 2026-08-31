@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Idempotent local setup + start script for IT Bank Banking Simulator.
-# Mirrors README.md steps 1-5, skipping any step already satisfied.
+# Mirrors README.md steps 1-4, skipping any step already satisfied.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
@@ -8,24 +8,7 @@ log()  { printf '\n\033[1;34m==>\033[0m %s\n' "$1"; }
 skip() { printf '    \033[2m(already done, skipping)\033[0m %s\n' "$1"; }
 
 # ---------------------------------------------------------------------------
-# 1. Database container
-# ---------------------------------------------------------------------------
-log "Checking PostgreSQL container"
-if [ -n "$(docker compose ps --status running -q postgres)" ]; then
-  skip "postgres container is running"
-else
-  echo "Starting postgres container..."
-  docker compose up -d
-fi
-
-echo "Waiting for postgres to accept connections..."
-until docker compose exec -T postgres pg_isready -U banking >/dev/null 2>&1; do
-  sleep 1
-done
-echo "Postgres is ready."
-
-# ---------------------------------------------------------------------------
-# 2. Dependencies
+# 1. Dependencies
 # ---------------------------------------------------------------------------
 log "Checking npm dependencies"
 if [ -f node_modules/.package-lock.json ] && [ node_modules/.package-lock.json -nt package-lock.json ]; then
@@ -36,7 +19,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Environment configuration
+# 2. Environment configuration
 # ---------------------------------------------------------------------------
 log "Checking environment files"
 if [ -f backend/.env ]; then
@@ -54,7 +37,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Prisma client, migrations, seed data
+# 3. Prisma client, migrations, seed data (embedded SQLite database)
 # ---------------------------------------------------------------------------
 log "Checking Prisma client generation"
 if [ -f node_modules/.prisma/client/index.js ]; then
@@ -73,16 +56,15 @@ else
 fi
 
 log "Checking seed data"
-user_count="$(docker compose exec -T postgres psql -U banking -d banking_simulator -tAc "SELECT count(*) FROM users;" 2>/dev/null || echo 0)"
-if [ "${user_count:-0}" -gt 0 ] 2>/dev/null; then
-  skip "database already contains seeded users ($user_count found)"
+if [ -f backend/prisma/dev.db ]; then
+  skip "backend/prisma/dev.db already exists"
 else
   echo "Seeding database..."
   npm run db:seed
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Start the app
+# 4. Start the app
 # ---------------------------------------------------------------------------
 log "Starting backend and frontend"
 

@@ -1,7 +1,7 @@
 import prisma from '../lib/prisma';
 import { AppError } from '../lib/AppError';
 import { generateIBAN } from '../lib/iban';
-import type { AccountType, RequestType } from '@prisma/client';
+import type { AccountType, RequestType } from '@banking-simulator/shared-types';
 
 type Status = 'active' | 'frozen' | 'closed';
 
@@ -19,7 +19,7 @@ export async function requireClientInPortfolio(managerId: string, customerId: st
 }
 
 // ─── Status transition validation (shared by accounts, debit + credit cards) ──
-function assertTransition(current: Status, target: Status) {
+function assertTransition(current: string, target: Status) {
   if (current === target) {
     throw new AppError(422, `Already ${target}`, 'INVALID_TRANSITION');
   }

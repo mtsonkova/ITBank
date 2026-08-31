@@ -7,7 +7,9 @@ A web-based banking simulator for QA training. Supports three roles: **Customer*
 ## Prerequisites
 
 - Node.js 20+
-- Docker + Docker Compose
+
+The database is an embedded SQLite file (`backend/prisma/dev.db`) — no separate
+database server or container to run.
 
 ## Local Setup
 
@@ -22,44 +24,32 @@ current state and skips anything already done:
 
 It will, in order:
 
-1. Start the `postgres` Docker container if it isn't already running, and wait
-   until it accepts connections.
-2. Run `npm install` if dependencies aren't already up to date with
+1. Run `npm install` if dependencies aren't already up to date with
    `package-lock.json`.
-3. Create `backend/.env` and `frontend/.env` from their `.env.example` files if
+2. Create `backend/.env` and `frontend/.env` from their `.env.example` files if
    they don't already exist.
-4. Generate the Prisma client, apply pending migrations, and seed the database —
-   each only if not already done (skips seeding if the `users` table already has
-   data).
-5. Start the backend (`http://localhost:3000`) and frontend
+3. Generate the Prisma client, apply pending migrations, and seed the database —
+   each only if not already done (skips seeding if `backend/prisma/dev.db`
+   already exists).
+4. Start the backend (`http://localhost:3000`) and frontend
    (`http://localhost:5173`) together. Press `Ctrl+C` to stop both.
 
 ### Manual setup
 
-### 1. Start the database
-
-```bash
-docker compose up -d
-```
-
-This starts PostgreSQL 16 on port `5432`.
-
-### 2. Install dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Configure environment
+### 2. Configure environment
 
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-Edit `backend/.env` if your DB credentials differ from the defaults.
-
-### 4. Generate the Prisma client, run migrations, and seed
+### 3. Generate the Prisma client, run migrations, and seed
 
 ```bash
 npm run db:generate
@@ -67,7 +57,9 @@ npm run db:migrate
 npm run db:seed
 ```
 
-### 5. Start the app
+This creates the SQLite database file at `backend/prisma/dev.db`.
+
+### 4. Start the app
 
 ```bash
 # Terminal 1 — backend (http://localhost:3000)
@@ -122,7 +114,7 @@ cd packages/shared-types && npm run typecheck
 
 ## Troubleshooting
 
-- **`ECONNREFUSED` on backend startup** — Postgres isn't reachable. Check `docker compose ps` and confirm `DATABASE_URL` in `backend/.env` matches the container's credentials/port.
 - **Prisma client errors ("did you forget to run generate?")** — run `npm run db:generate`.
+- **Want a totally clean database** — stop the backend and delete `backend/prisma/dev.db*`, then run `npm run db:migrate && npm run db:seed`.
 - **Port already in use (3000 or 5173)** — find and stop the other process (`lsof -i:3000`), or change `PORT` in `backend/.env` (and `VITE_API_BASE_URL` in `frontend/.env` to match).
 - **Login always fails** — confirm the DB was seeded (`npm run db:seed`) and that you're using `Password123!`.

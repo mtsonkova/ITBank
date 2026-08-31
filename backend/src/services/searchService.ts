@@ -88,7 +88,7 @@ function accountsWhere(scope: SearchScope, q: string): Prisma.BankAccountWhereIn
 
   and.push({
     OR: [
-      { iban: { contains: ibanQuery, mode: 'insensitive' } },
+      { iban: { contains: ibanQuery } },
       ...(typeMatches.length ? [{ type: { in: [...typeMatches] } }] : []),
       ...(statusMatches.length ? [{ status: { in: [...statusMatches] } }] : []),
     ],
@@ -141,7 +141,7 @@ function debitCardsWhere(scope: SearchScope, q: string): Prisma.DebitCardWhereIn
   if (scope.customerIds !== null) and.push({ customerId: { in: scope.customerIds } });
 
   const or: Prisma.DebitCardWhereInput[] = [
-    { bankAccount: { iban: { contains: ibanQuery, mode: 'insensitive' } } },
+    { bankAccount: { iban: { contains: ibanQuery } } },
   ];
   if (statusMatches.length) or.push({ status: { in: [...statusMatches] } });
   if ('debit card'.includes(lower) || lower.includes('debit')) or.push({});
@@ -258,10 +258,10 @@ function transactionsTextWhere(q: string): Prisma.TransactionWhereInput {
 
   return {
     OR: [
-      { description: { contains: q, mode: 'insensitive' } },
+      { description: { contains: q } },
       ...(typeMatches.length ? [{ type: { in: [...typeMatches] } }] : []),
-      { fromAccount: { iban: { contains: ibanQuery, mode: 'insensitive' } } },
-      { toAccount: { iban: { contains: ibanQuery, mode: 'insensitive' } } },
+      { fromAccount: { iban: { contains: ibanQuery } } },
+      { toAccount: { iban: { contains: ibanQuery } } },
     ],
   };
 }
@@ -296,8 +296,8 @@ function usersWhere(scope: SearchScope, q: string): Prisma.UserWhereInput {
   if (scope.customerIds !== null) and.push({ id: { in: scope.customerIds } });
   and.push({
     OR: [
-      { fullName: { contains: q, mode: 'insensitive' } },
-      { username: { contains: q, mode: 'insensitive' } },
+      { fullName: { contains: q } },
+      { username: { contains: q } },
     ],
   });
   return { AND: and };
@@ -334,8 +334,8 @@ function managersWhere(q: string): Prisma.UserWhereInput {
       { role: 'account_manager' },
       {
         OR: [
-          { fullName: { contains: q, mode: 'insensitive' } },
-          { username: { contains: q, mode: 'insensitive' } },
+          { fullName: { contains: q } },
+          { username: { contains: q } },
         ],
       },
     ],

@@ -12,9 +12,8 @@ TypeScript monorepo using **npm workspaces**, with a shared types package consum
 banking-simulator/
 ├── packages/
 │   └── shared-types/      ← Zod schemas + inferred TS types (enums, entities, API envelopes)
-├── backend/                ← REST API
+├── backend/                ← REST API (+ embedded SQLite database file)
 ├── frontend/                ← React SPA
-├── docker-compose.yml       ← Postgres
 └── SPEC.md / requirements   ← source-of-truth task breakdown
 ```
 
@@ -43,8 +42,8 @@ banking-simulator/
 ## Database
 | Concern | Choice |
 |---|---|
-| Engine | PostgreSQL 16 |
-| Provisioning | Docker Compose (local container, named volume) |
+| Engine | SQLite (embedded, file-based) |
+| Provisioning | None — `backend/prisma/dev.db` is created on first migration, no server or container to run |
 | Schema/migrations | Prisma schema + migrations |
 | Seed data | Prisma seed script — 1 admin, 2 account managers, 4 customers (2 per manager), each with a sample bank account, debit card, and credit card |
 | Demo login | All seeded users share password `Password123!` |
@@ -64,5 +63,5 @@ The domain is heavy with status/enum-driven business rules (account/card `active
 ## Why a Monorepo (vs. separate repos)
 One team, one product, no need for independent deploy cadence across services — the scenario where separate repos with a published contract package wins in real fintech orgs. A monorepo with a `shared-types` package gets the same type-safety benefit with far less infrastructure, and keeps the seed data, API routes, and frontend API client referencing the exact same enums and shapes.
 
-## Why Postgres (not an embedded/file-based DB)
-Matches SPEC.md's recommendation and keeps the project closer to a realistic banking backend (proper relational constraints, concurrent transaction handling) rather than a toy file-based DB. Docker Compose keeps the "clone and run" experience simple despite using a real server-based database.
+## Why an embedded database (SQLite, not Postgres)
+Originally the project ran on Postgres via Docker Compose for closer parity with a real banking backend. It was later switched to an embedded SQLite file (the Spring PetClinic model) to drop the Docker/server dependency entirely — clone, `npm install`, run — which matters more for a QA training project than concurrent-write realism. Trade-offs accepted: no native enum or JSON column types (enforced instead by the Zod schemas in `packages/shared-types`), and `mode: 'insensitive'` Prisma filters were removed in favor of SQLite's default case-insensitive `LIKE`.

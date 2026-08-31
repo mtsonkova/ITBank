@@ -5,8 +5,8 @@ import { authorize } from '../middleware/authorize';
 import { validateBody } from '../middleware/validateBody';
 import { AppError } from '../lib/AppError';
 import prisma from '../lib/prisma';
-import { Prisma } from '@prisma/client';
-import type { RequestType } from '@prisma/client';
+import { parsePayload, serializePayload } from '../lib/jsonPayload';
+import type { RequestType } from '@banking-simulator/shared-types';
 
 const router = Router();
 
@@ -39,9 +39,9 @@ function serializeRequest(r: {
   id: string;
   customerId: string;
   accountManagerId: string | null;
-  type: RequestType;
+  type: string;
   status: string;
-  payload: unknown;
+  payload: string;
   rejectionReason: string | null;
   createdAt: Date;
   actionedAt: Date | null;
@@ -52,7 +52,7 @@ function serializeRequest(r: {
     accountManagerId: r.accountManagerId,
     type: r.type,
     status: r.status,
-    payload: r.payload,
+    payload: parsePayload(r.payload),
     rejectionReason: r.rejectionReason,
     createdAt: r.createdAt.toISOString(),
     actionedAt: r.actionedAt?.toISOString() ?? null,
@@ -69,9 +69,7 @@ async function hasDuplicatePending(
     where: { customerId, type, status: 'pending' },
     select: { payload: true },
   });
-  return pending.some(
-    (r) => (r.payload as Record<string, unknown>)[payloadKey] === payloadValue,
-  );
+  return pending.some((r) => parsePayload(r.payload)[payloadKey] === payloadValue);
 }
 
 // ─── GET /api/v1/requests ─────────────────────────────────────────────────────
@@ -200,7 +198,7 @@ router.post('/', authenticate, authorize('customer'), validateBody(CreateRequest
         accountManagerId,
         type: reqType,
         status: 'pending',
-        payload: payload as Prisma.InputJsonObject,
+        payload: serializePayload(payload),
       },
     });
 

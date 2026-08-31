@@ -40,9 +40,8 @@ TypeScript monorepo — npm workspaces
 banking-simulator/
 ├── packages/
 │   └── shared-types/       ← Zod schemas + inferred TS types (enums, entities, API envelopes)
-├── backend/                 ← REST API
+├── backend/                 ← REST API (+ embedded SQLite database file)
 ├── frontend/                ← React SPA
-├── docker-compose.yml       ← PostgreSQL 16
 └── BUILD_PLAN.md            ← this file
 ```
 
@@ -71,8 +70,8 @@ banking-simulator/
 ### Database
 | Concern | Choice |
 |---|---|
-| Engine | PostgreSQL 16 |
-| Provisioning | Docker Compose (named volume) |
+| Engine | SQLite (embedded, file-based — see [TECH_STACK.md](TECH_STACK.md)) |
+| Provisioning | None — `backend/prisma/dev.db` is created on first migration |
 | Migrations | Prisma schema + migrations |
 | Seed | Prisma seed script |
 | Demo password | All seeded users: `Password123!` |
@@ -154,7 +153,7 @@ banking-simulator/
 
 ### 1.1 Monorepo Scaffolding
 - Root `package.json` with npm workspaces: `backend/`, `frontend/`, `packages/shared-types/`
-- `docker-compose.yml` — PostgreSQL 16, named volume
+- `docker-compose.yml` — PostgreSQL 16, named volume (later removed — see [TECH_STACK.md](TECH_STACK.md#why-an-embedded-database-sqlite-not-postgres); replaced by an embedded SQLite file)
 - `CLAUDE.md` at root (project memory)
 - `.env.example` for `backend/` and `frontend/`
 - Root `README.md` with local setup instructions

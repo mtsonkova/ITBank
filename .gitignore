@@ -10,8 +10,9 @@ frontend/.env
 dist/
 build/
 
-# Prisma
-backend/prisma/migrations/*.db
+# Prisma (embedded SQLite database file)
+backend/prisma/*.db
+backend/prisma/*.db-journal
 
 # Logs
 *.log

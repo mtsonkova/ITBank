@@ -13,6 +13,7 @@ import { authorize } from '../middleware/authorize';
 import { validateBody } from '../middleware/validateBody';
 import { AppError } from '../lib/AppError';
 import prisma from '../lib/prisma';
+import { parsePayload } from '../lib/jsonPayload';
 import {
   requireClientInPortfolio,
   openAccount,
@@ -206,7 +207,7 @@ router.get('/:customerId', authenticate, authorize('account_manager'), async (re
           id: r.id,
           type: r.type,
           status: r.status,
-          payload: r.payload,
+          payload: parsePayload(r.payload),
           createdAt: r.createdAt.toISOString(),
         })),
       },

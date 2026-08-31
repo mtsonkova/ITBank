@@ -5,7 +5,8 @@ import { authorize } from '../middleware/authorize';
 import { validateBody } from '../middleware/validateBody';
 import { AppError } from '../lib/AppError';
 import prisma from '../lib/prisma';
-import type { RequestType } from '@prisma/client';
+import type { RequestType } from '@banking-simulator/shared-types';
+import { parsePayload } from '../lib/jsonPayload';
 import { applySideEffect } from '../services/managerService';
 
 const router = Router();
@@ -14,9 +15,9 @@ export function serializeRequest(r: {
   id: string;
   customerId: string;
   accountManagerId: string | null;
-  type: RequestType;
+  type: string;
   status: string;
-  payload: unknown;
+  payload: string;
   rejectionReason: string | null;
   createdAt: Date;
   actionedAt: Date | null;
@@ -28,7 +29,7 @@ export function serializeRequest(r: {
     accountManagerId: r.accountManagerId,
     type: r.type,
     status: r.status,
-    payload: r.payload,
+    payload: parsePayload(r.payload),
     rejectionReason: r.rejectionReason,
     createdAt: r.createdAt.toISOString(),
     actionedAt: r.actionedAt?.toISOString() ?? null,
@@ -74,7 +75,7 @@ router.post('/:id/approve', authenticate, authorize('account_manager'), async (r
       throw new AppError(422, 'Only pending requests can be approved', 'NOT_PENDING');
     }
 
-    await applySideEffect(request.customerId, request.type, request.payload as Record<string, unknown>);
+    await applySideEffect(request.customerId, request.type as RequestType, parsePayload(request.payload));
 
     const updated = await prisma.request.update({
       where: { id },

@@ -1,7 +1,7 @@
-import { Prisma, TransactionType, AccountType, type Transaction as TransactionRow } from '@prisma/client';
+import { Prisma, type Transaction as TransactionRow } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { AppError } from '../lib/AppError';
-import type { InstrumentRef, TransactionHistoryItem } from '@banking-simulator/shared-types';
+import { TransactionTypeSchema, type AccountType, type InstrumentRef, type TransactionHistoryItem, type TransactionType } from '@banking-simulator/shared-types';
 
 export const PAGE_SIZES = [10, 25, 50, 100] as const;
 export const DEFAULT_PAGE_SIZE = 10;
@@ -51,7 +51,7 @@ export function parseLimit(raw: unknown): number {
 
 export function parseType(raw: unknown): TransactionType | undefined {
   if (!raw) return undefined;
-  const valid = Object.values(TransactionType) as string[];
+  const valid = TransactionTypeSchema.options as string[];
   if (!valid.includes(raw as string)) {
     throw new AppError(400, `type must be one of ${valid.join(', ')}`, 'INVALID_TYPE');
   }
@@ -204,7 +204,7 @@ export async function serializeRows(rows: TransactionRow[], scope: HistoryScope 
 
     return {
       id: r.id,
-      type: r.type,
+      type: r.type as TransactionType,
       amount,
       description: r.description,
       createdAt: r.createdAt.toISOString(),
